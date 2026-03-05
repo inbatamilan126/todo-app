@@ -1,7 +1,7 @@
 // Use relative path to go through Vite proxy in development
 export const API_URL = '/api';
-export const WS_URL = import.meta.env.VITE_WS_URL
-  || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000');
+// Empty string means "same origin" for socket.io client.
+export const WS_URL = import.meta.env.VITE_WS_URL || '';
 
 export const TASK_STATUSES = {
   TODO: 'todo',

@@ -12,7 +12,8 @@ class SocketService {
       return;
     }
 
-    this.socket = io(WS_URL || 'http://localhost:5000', {
+    const socketUrl = WS_URL && WS_URL.trim() ? WS_URL : undefined;
+    this.socket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
     });
