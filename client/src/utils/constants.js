@@ -1,6 +1,7 @@
 // Use relative path to go through Vite proxy in development
 export const API_URL = '/api';
-export const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
+export const WS_URL = import.meta.env.VITE_WS_URL
+  || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000');
 
 export const TASK_STATUSES = {
   TODO: 'todo',
