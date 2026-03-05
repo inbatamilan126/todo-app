@@ -37,6 +37,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Never serve app-shell HTML for backend/API routes.
+        navigateFallbackDenylist: [/^\/api\/.*/, /^\/socket\.io\/.*/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\./,
