@@ -1,0 +1,820 @@
+# Todo App - Project Specification
+
+> **Version:** 1.0.0  
+> **Last Updated:** 2026-03-04  
+> **Status:** Planning Phase
+
+---
+
+## Table of Contents
+
+1. [Project Overview](#1-project-overview)
+2. [Tech Stack](#2-tech-stack)
+3. [Database Schema](#3-database-schema)
+4. [API Specification](#4-api-specification)
+5. [Frontend Architecture](#5-frontend-architecture)
+6. [Component Specification](#6-component-specification)
+7. [Pages Specification](#7-pages-specification)
+8. [Real-time & PWA](#8-real-time--pwa)
+9. [Mobile Responsiveness](#9-mobile-responsiveness)
+10. [Future Extensibility](#10-future-extensibility)
+
+---
+
+## 1. Project Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Project Name** | Todo App |
+| **Type** | Cross-platform Kanban Task Management Application |
+| **Core Features** | Task CRUD, Projects/Categories, Priority Levels, Due Dates, Task Notes, Subtasks, Kanban Board |
+| **Target Users** | Individual users managing personal tasks |
+| **Platform** | Web (PWA), Mobile Browser, Desktop Browser |
+
+---
+
+## 2. Tech Stack
+
+### Backend
+| Layer | Technology | Version |
+|-------|------------|---------|
+| Runtime | Node.js | 20.x LTS |
+| Framework | Express.js | 4.x |
+| Database | PostgreSQL | 16.x |
+| ORM | Prisma | 5.x |
+| Authentication | JWT + Passport.js | - |
+| WebSocket | Socket.io | 4.x |
+| Validation | Zod | 3.x |
+| Password Hashing | bcrypt | 5.x |
+
+### Frontend
+| Layer | Technology | Version |
+|-------|------------|---------|
+| Framework | React | 18.x |
+| Build Tool | Vite | 5.x |
+| Routing | React Router | 6.x |
+| State Management | React Context + useReducer | - |
+| HTTP Client | Axios | 1.x |
+| WebSocket Client | Socket.io-client | 4.x |
+| Drag & Drop | @dnd-kit | 6.x |
+| UI Framework | Tailwind CSS | 3.x |
+| Date Handling | date-fns | 3.x |
+| Icons | Lucide React | - |
+| PWA | vite-plugin-pwa | - |
+
+### Development Tools
+| Tool | Purpose |
+|------|---------|
+| Docker + Docker Compose | PostgreSQL database |
+| concurrently | Run backend/frontend simultaneously |
+| TypeScript | (Optional - using JavaScript for simplicity) |
+
+---
+
+## 3. Database Schema
+
+### Entity Relationship Diagram
+
+```
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│    users     │       │  projects    │       │    tasks     │
+├──────────────┤       ├──────────────┤       ├──────────────┤
+│ id (PK)      │◄──────│ id (PK)      │◄──────│ id (PK)      │
+│ email        │       │ user_id (FK) │       │ project_id   │
+│ password     │       │ name         │       │ parent_id    │
+│ name         │       │ color        │       │ user_id      │
+│ avatar_url   │       │ position     │       │ title        │
+│ provider     │       │ created_at   │       │ description  │
+│ theme        │       │ updated_at   │       │ due_date     │
+│ created_at   │       └──────────────┘       │ priority     │
+│ updated_at   │                              │ status       │
+└──────────────┘                              │ position     │
+                                                │ created_at   │
+                                                │ updated_at   │
+                                                └──────────────┘
+                                                        │
+                                               ┌────────┴────────┐
+                                               │ notifications   │
+                                               ├─────────────────┤
+                                               │ id (PK)         │
+                                               │ user_id (FK)    │
+                                               │ type            │
+                                               │ title           │
+                                               │ message         │
+                                               │ data (JSONB)    │
+                                               │ read            │
+                                               │ created_at      │
+                                               └─────────────────┘
+```
+
+### Table Definitions
+
+#### 3.1 users
+```sql
+CREATE TABLE users (
+  id            UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         VARCHAR(255)    UNIQUE NOT NULL,
+  password      VARCHAR(255),              -- NULL for OAuth users
+  name          VARCHAR(100)   NOT NULL,
+  avatar_url    VARCHAR(500),
+  provider      VARCHAR(20)    DEFAULT 'email',  -- 'email', 'google', 'github'
+  theme         VARCHAR(10)    DEFAULT 'system', -- 'light', 'dark', 'system'
+  created_at    TIMESTAMP      DEFAULT NOW(),
+  updated_at    TIMESTAMP      DEFAULT NOW()
+);
+```
+
+#### 3.2 projects
+```sql
+CREATE TABLE projects (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name        VARCHAR(100) NOT NULL,
+  color       VARCHAR(7)   DEFAULT '#3b82f6',  -- Hex color
+  position    INTEGER      DEFAULT 0,
+  created_at  TIMESTAMP    DEFAULT NOW(),
+  updated_at  TIMESTAMP    DEFAULT NOW()
+);
+```
+
+#### 3.3 tasks
+```sql
+CREATE TABLE tasks (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id  UUID        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  parent_id   UUID        REFERENCES tasks(id) ON DELETE CASCADE,  -- Self-reference for subtasks
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title       VARCHAR(255) NOT NULL,
+  description TEXT,
+  due_date    TIMESTAMP,
+  priority    VARCHAR(10)  DEFAULT 'medium',  -- 'low', 'medium', 'high'
+  status      VARCHAR(20)  DEFAULT 'todo',    -- 'todo', 'in_progress', 'done'
+  position    INTEGER      DEFAULT 0,         -- For Kanban ordering
+  created_at  TIMESTAMP    DEFAULT NOW(),
+  updated_at  TIMESTAMP    DEFAULT NOW()
+);
+```
+
+**Derived Field:** `is_subtask` = `parent_id IS NOT NULL`
+
+#### 3.4 notifications
+```sql
+CREATE TABLE notifications (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type        VARCHAR(50) NOT NULL,  -- 'task_assigned', 'task_due', 'task_completed'
+  title       VARCHAR(255) NOT NULL,
+  message     TEXT,
+  data        JSONB,                 -- { taskId, projectId, etc. }
+  read        BOOLEAN   DEFAULT false,
+  created_at  TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user_unread 
+ON notifications(user_id, read) WHERE read = false;
+```
+
+---
+
+## 4. API Specification
+
+### Base URL
+```
+Development: http://localhost:5000/api
+Production: https://api.todoapp.com/api
+```
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| POST | `/auth/register` | Register with email/password | No |
+| POST | `/auth/login` | Login with email/password | No |
+| POST | `/auth/oauth/:provider` | OAuth login (Google/GitHub) | No |
+| GET | `/auth/me` | Get current user | Yes |
+| PUT | `/auth/profile` | Update profile | Yes |
+| PUT | `/auth/theme` | Update theme preference | Yes |
+| POST | `/auth/logout` | Logout | Yes |
+
+### Project Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| GET | `/projects` | List all user's projects | Yes |
+| POST | `/projects` | Create project | Yes |
+| GET | `/projects/:id` | Get single project | Yes |
+| PUT | `/projects/:id` | Update project | Yes |
+| DELETE | `/projects/:id` | Delete project | Yes |
+| PUT | `/projects/:id/reorder` | Reorder projects | Yes |
+
+### Task Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| GET | `/projects/:projectId/tasks` | Get all tasks in project (includes subtasks) | Yes |
+| POST | `/projects/:projectId/tasks` | Create task | Yes |
+| GET | `/tasks/:id` | Get single task with subtasks | Yes |
+| PUT | `/tasks/:id` | Update task | Yes |
+| DELETE | `/tasks/:id` | Delete task (cascades to subtasks) | Yes |
+| PUT | `/tasks/:id/move` | Move task (change status/position) | Yes |
+| PUT | `/tasks/:id/subtasks` | Update subtasks order | Yes |
+
+### Notification Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| GET | `/notifications` | Get all notifications | Yes |
+| GET | `/notifications/unread` | Get unread notifications | Yes |
+| GET | `/notifications/count` | Get unread count | Yes |
+| PUT | `/notifications/:id/read` | Mark as read | Yes |
+| PUT | `/notifications/read-all` | Mark all as read | Yes |
+
+### WebSocket Events
+
+#### Client → Server
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `join:project` | `{ projectId }` | Join project room for real-time updates |
+| `leave:project` | `{ projectId }` | Leave project room |
+
+#### Server → Client
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `task:created` | `{ task }` | New task created |
+| `task:updated` | `{ task }` | Task updated |
+| `task:deleted` | `{ taskId }` | Task deleted |
+| `task:moved` | `{ taskId, status, position }` | Task moved in Kanban |
+| `notification:new` | `{ notification }` | New notification |
+
+### Request/Response Formats
+
+#### Task Object
+```json
+{
+  "id": "uuid",
+  "projectId": "uuid",
+  "parentId": "uuid|null",
+  "title": "string",
+  "description": "string|null",
+  "dueDate": "ISO8601|null",
+  "priority": "low|medium|high",
+  "status": "todo|in_progress|done",
+  "position": 0,
+  "subtasks": [],
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+---
+
+## 5. Frontend Architecture
+
+### Directory Structure
+
+```
+client/
+├── public/
+│   ├── index.html
+│   ├── manifest.json          # PWA manifest
+│   └── icons/                 # PWA icons (192x192, 512x512)
+├── src/
+│   ├── components/
+│   │   ├── common/            # Reusable UI components
+│   │   │   ├── Button.jsx
+│   │   │   ├── Input.jsx
+│   │   │   ├── Modal.jsx
+│   │   │   ├── Select.jsx
+│   │   │   ├── DatePicker.jsx
+│   │   │   └── Badge.jsx
+│   │   ├── layout/            # Layout components
+│   │   │   ├── AppLayout.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   ├── Header.jsx
+│   │   │   └── MobileNav.jsx
+│   │   ├── kanban/            # Kanban board components
+│   │   │   ├── KanbanBoard.jsx
+│   │   │   ├── KanbanColumn.jsx
+│   │   │   └── TaskCard.jsx
+│   │   └── task/              # Task-related components
+│   │       ├── TaskModal.jsx
+│   │       ├── TaskForm.jsx
+│   │       ├── SubtaskList.jsx
+│   │       ├── SubtaskItem.jsx
+│   │       └── TaskHeader.jsx
+│   ├── pages/
+│   │   ├── Login.jsx
+│   │   ├── Register.jsx
+│   │   ├── Dashboard.jsx      # Main Kanban view
+│   │   ├── ProjectView.jsx    # Single project Kanban
+│   │   └── Settings.jsx
+│   ├── context/
+│   │   ├── AuthContext.jsx    # Authentication state
+│   │   ├── ThemeContext.jsx   # Dark/Light mode
+│   │   ├── ProjectContext.jsx # Projects state
+│   │   ├── TaskContext.jsx    # Tasks state
+│   │   └── SocketContext.jsx  # WebSocket state
+│   ├── hooks/
+│   │   ├── useAuth.js
+│   │   ├── useTheme.js
+│   │   ├── useProjects.js
+│   │   ├── useTasks.js
+│   │   └── useSocket.js
+│   ├── services/
+│   │   ├── api.js             # Axios instance
+│   │   ├── authService.js
+│   │   ├── projectService.js
+│   │   ├── taskService.js
+│   │   └── socketService.js
+│   ├── utils/
+│   │   ├── constants.js
+│   │   ├── helpers.js
+│   │   └── cn.js              # classnames utility
+│   ├── styles/
+│   │   └── globals.css        # Tailwind imports + custom CSS
+│   ├── App.jsx
+│   └── main.jsx
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+└── postcss.config.js
+```
+
+### Backend Directory Structure
+
+```
+server/
+├── src/
+│   ├── config/
+│   │   └── db.js              # Prisma client
+│   ├── models/                # (Optional) Business logic models
+│   │   └── prisma/            # Prisma queries
+│   │       ├── user.js
+│   │       ├── project.js
+│   │       └── task.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── projects.js
+│   │   ├── tasks.js
+│   │   └── notifications.js
+│   ├── middleware/
+│   │   ├── auth.js            # JWT verification
+│   │   ├── errorHandler.js
+│   │   └── validate.js        # Zod validation
+│   ├── services/
+│   │   ├── websocket.js      # Socket.io setup
+│   │   ├── authService.js
+│   │   └── notificationService.js
+│   ├── utils/
+│   │   ├── jwt.js
+│   │   └── helpers.js
+│   ├── validators/
+│   │   ├── authValidator.js
+│   │   ├── projectValidator.js
+│   │   └── taskValidator.js
+│   └── index.js               # Entry point
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.js
+├── package.json
+└── .env.example
+```
+
+---
+
+## 6. Component Specification
+
+### 6.1 Common Components
+
+#### Button
+- **Variants:** `primary`, `secondary`, `ghost`, `danger`
+- **Sizes:** `sm` (32px), `md` (40px), `lg` (48px)
+- **States:** default, hover, active, disabled, loading
+- **Props:** `variant`, `size`, `disabled`, `loading`, `onClick`, `children`
+
+#### Input
+- **Types:** text, email, password
+- **Features:** label, placeholder, error message, icon prefix
+- **Props:** `label`, `error`, `icon`, `type`, `value`, `onChange`
+
+#### Modal
+- **Features:** 
+  - Backdrop click to close
+  - Escape key to close
+  - Scrollable content
+  - Close button
+  - Mobile: Bottom sheet on mobile (< 640px)
+- **Props:** `isOpen`, `onClose`, `title`, `children`, `size`
+
+#### Badge (Priority)
+- **Variants:** 
+  - High: Red background (`#ef4444`)
+  - Medium: Yellow background (`#eab308`)
+  - Low: Green background (`#22c55e`)
+- **Props:** `priority`, `size`
+
+#### DatePicker
+- **Features:**
+  - Calendar dropdown
+  - Quick options: Today, Tomorrow, Next Week
+  - Clear date option
+- **Props:** `value`, `onChange`, `minDate`
+
+### 6.2 Layout Components
+
+#### AppLayout
+- **Desktop:** Sidebar (240px) + Main Content
+- **Mobile:** Collapsible sidebar (hamburger), bottom navigation
+- **Responsive:** Breakpoint at 1024px
+
+#### Sidebar
+- **Width:** 240px (desktop), full-width drawer (mobile)
+- **Contents:**
+  - App logo/name
+  - Project list (scrollable)
+  - "Add Project" button
+  - Settings link
+  - User profile section
+- **Interactions:**
+  - Click project to navigate
+  - Right-click project for context menu (edit/delete)
+  - Drag to reorder projects
+
+#### Header
+- **Contents:**
+  - Mobile: Hamburger menu + Project name
+  - Desktop: Breadcrumb + Search bar + Theme toggle + User menu
+- **Height:** 56px
+
+#### MobileNav (Mobile Only)
+- **Position:** Fixed bottom
+- **Items:** Home, Projects, Add Task, Notifications, Profile
+
+### 6.3 Kanban Components
+
+#### KanbanBoard
+- **Layout:** Horizontal scroll container with columns
+- **Columns:** To Do, In Progress, Done (customizable)
+- **Features:**
+  - Drag and drop between columns
+  - Drag to reorder within column
+  - Scroll horizontally on mobile
+- **Props:** `projectId`, `tasks`
+
+#### KanbanColumn
+- **Header:** Column name + task count
+- **Footer:** "Add task" button
+- **Features:**
+  - Drop zone for tasks
+  - Collapse/expand (optional)
+  - Color indicator
+- **Props:** `status`, `title`, `tasks`, `onDrop`, `onAddTask`
+
+#### TaskCard
+- **Display:**
+  - Title (truncated to 2 lines)
+  - Priority badge (colored dot)
+  - Due date (if set)
+  - Subtask progress (e.g., "2/4")
+- **Interactions:**
+  - Click to open TaskModal
+  - Drag handle
+  - Quick actions on hover (complete, delete)
+- **Props:** `task`, `onClick`, `onComplete`, `onDelete`
+
+### 6.4 Task Components
+
+#### TaskModal
+- **Layout:** Modal with form
+- **Sections:**
+  - Header: Title input, close button
+  - Body: Description, due date, priority, subtasks
+  - Footer: Cancel, Save buttons
+- **Mobile:** Full-screen bottom sheet
+- **Props:** `task`, `isOpen`, `onClose`, `onSave`
+
+#### TaskForm
+- **Fields:**
+  - Title (required)
+  - Description (textarea)
+  - Due Date (date picker)
+  - Priority (select: Low, Medium, High)
+  - Project (select - if accessible from multiple projects)
+- **Validation:** Title required, max 255 chars
+
+#### SubtaskList
+- **Display:** Indented list under main task
+- **Features:**
+  - Checkbox for completion
+  - Add new subtask
+  - Delete subtask
+  - Reorder subtasks
+- **Progress:** "X/Y completed" indicator
+- **Props:** `subtasks`, `onAdd`, `onUpdate`, `onDelete`, `onReorder`
+
+#### SubtaskItem
+- **Display:** Checkbox + title + actions
+- **Interactions:**
+  - Toggle complete
+  - Click to edit inline
+  - Delete button on hover
+
+---
+
+## 7. Pages Specification
+
+### 7.1 Login Page (`/login`)
+
+**Layout:**
+- Centered card (max-width: 400px)
+- Logo at top
+- Form: Email, Password
+- "Login" button
+- "Register" link
+- OAuth buttons: Google, GitHub
+
+**Validation:**
+- Email: Required, valid format
+- Password: Required, min 6 chars
+
+### 7.2 Register Page (`/register`)
+
+**Layout:**
+- Centered card (max-width: 400px)
+- Form: Name, Email, Password, Confirm Password
+- "Register" button
+- "Login" link
+
+**Validation:**
+- Name: Required, 2-100 chars
+- Email: Required, valid format
+- Password: Required, min 6 chars
+- Confirm: Must match
+
+### 7.3 Dashboard (`/dashboard`)
+
+**Layout:**
+- All projects overview
+- Recent tasks
+- Quick actions
+
+**Features:**
+- List of all projects with task counts
+- "Inbox" for tasks without project (optional)
+- Recent activity
+
+### 7.4 Project View (`/projects/:id`)
+
+**Layout:**
+- Full Kanban board
+- Project header with name, color, menu
+- 3 columns: To Do, In Progress, Done
+
+**Features:**
+- Drag and drop tasks
+- Quick add task to any column
+- Filter by priority (optional)
+- Search within project
+
+### 7.5 Settings Page (`/settings`)
+
+**Sections:**
+- **Profile:** Name, Email, Avatar
+- **Preferences:** Theme (Light/Dark/System)
+- **Account:** Change password (if email user)
+- **Danger Zone:** Delete account
+
+---
+
+## 8. Real-time & PWA
+
+### 8.1 WebSocket Integration
+
+**Connection:**
+- Connect on authentication
+- Join project rooms on navigation
+- Auto-reconnect on disconnect
+
+**Events Handled:**
+- Task CRUD updates
+- Kanban position changes
+- Notification received
+
+**Optimistic Updates:**
+- Update UI immediately on action
+- Rollback on server error
+
+### 8.2 PWA Configuration
+
+**Manifest (manifest.json):**
+```json
+{
+  "name": "Todo App",
+  "short_name": "Todos",
+  "description": "Kanban task management",
+  "theme_color": "#3b82f6",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+```
+
+**Service Worker:**
+- Cache: HTML, CSS, JS, static assets
+- Network-first for API calls
+- Background sync for offline actions
+
+---
+
+## 9. Mobile Responsiveness
+
+### Breakpoints
+
+| Breakpoint | Width | Layout |
+|------------|-------|--------|
+| xs | < 640px | Single column, bottom nav, bottom sheet modals |
+| sm | 640px | Same as xs |
+| md | 768px | 2 kanban columns visible |
+| lg | 1024px | 3 kanban columns + sidebar |
+| xl | 1280px | Same as lg with more space |
+
+### Mobile Optimizations
+
+| Feature | Implementation |
+|---------|----------------|
+| **Navigation** | Bottom tab bar (5 items max) |
+| **Sidebar** | Slide-out drawer, hamburger toggle |
+| **Modals** | Bottom sheet (90% height) |
+| **Kanban** | Horizontal scroll, snap to column |
+| **Task Cards** | Larger touch targets (min 44px) |
+| **Forms** | Full-width inputs, stacked labels |
+| **Drag & Drop** | Touch-friendly, visual feedback |
+| **Pull to Refresh** | Standard browser refresh |
+| **Keyboard** | Proper focus states, no horizontal scroll |
+
+### Touch Gestures
+
+| Gesture | Action |
+|---------|--------|
+| Swipe right on task | Mark complete |
+| Swipe left on task | Delete (with confirm) |
+| Long press on task | Show context menu |
+| Pull down | Refresh |
+| Pinch | Zoom (disabled for UX) |
+
+---
+
+## 10. Future Extensibility
+
+### Planned Features (Not in Initial Scope)
+
+| Feature | Schema Changes | API Changes | Frontend Changes |
+|---------|---------------|-------------|------------------|
+| **Labels/Tags** | Add `labels`, `task_labels` tables | New routes | Filter UI, tag component |
+| **Task Dependencies** | Add `depends_on` column | Validate in task move | Dependency indicator |
+| **Recurring Tasks** | Add `recurrence_pattern` column | Cron job + new endpoint | Recurrence picker |
+| **Multiple Assignees** | Add `task_assignees` table | New routes | Assignee selector |
+| **File Attachments** | Add `attachments` table | File upload endpoint | Attachment list UI |
+| **Time Tracking** | Add `time_entries` table | Timer endpoints | Timer component |
+| **Comments** | Already in schema as `notifications` | Use notification type | Comments section |
+
+### How to Add Features
+
+1. **Database:** Add table/columns via Prisma migration
+2. **API:** Add routes in `server/src/routes/`
+3. **Services:** Add service methods in `server/src/services/`
+4. **Frontend:** Add component in `client/src/components/`
+5. **State:** Update Context if needed
+
+---
+
+## 11. Development Workflow
+
+### Running Backend Only
+```bash
+cd server
+npm install
+cp .env.example .env
+# Configure .env with database URL
+npx prisma migrate dev
+npx prisma generate
+npm run dev
+# Backend runs on http://localhost:5000
+```
+
+### Running Frontend Only
+```bash
+cd client
+npm install
+# Configure API base URL in src/services/api.js
+npm run dev
+# Frontend runs on http://localhost:5173
+```
+
+### Running Both
+```bash
+# Terminal 1
+cd server && npm run dev
+
+# Terminal 2
+cd client && npm run dev
+```
+
+---
+
+## 12. Acceptance Criteria
+
+### Authentication
+- [ ] User can register with email/password
+- [ ] User can login with email/password
+- [ ] User can login with Google OAuth
+- [ ] User can logout
+- [ ] Protected routes redirect to login
+
+### Projects
+- [ ] User can create a project
+- [ ] User can edit project name/color
+- [ ] User can delete project (with confirmation)
+- [ ] User can reorder projects
+
+### Tasks
+- [ ] User can create a task
+- [ ] User can edit task details
+- [ ] User can delete task
+- [ ] User can set due date
+- [ ] User can set priority
+- [ ] User can add subtasks
+- [ ] User can toggle subtask completion
+- [ ] User can drag task between columns
+- [ ] User can reorder tasks within column
+
+### UI/UX
+- [ ] Dark mode works
+- [ ] Theme persists across sessions
+- [ ] Mobile responsive layout works
+- [ ] PWA can be installed
+
+### Real-time
+- [ ] Changes sync across tabs
+- [ ] WebSocket reconnects on disconnect
+
+---
+
+## 13. Environment Variables
+
+### Server (.env)
+```
+PORT=5000
+NODE_ENV=development
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/todoapp?schema=public
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRES_IN=7d
+
+# OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# Client URL (for CORS)
+CLIENT_URL=http://localhost:5173
+```
+
+### Client (.env)
+```
+VITE_API_URL=http://localhost:5000/api
+VITE_WS_URL=http://localhost:5000
+```
+
+---
+
+## 14. Implementation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| SPEC.md | ✅ Complete | This document |
+| Backend Setup | ⏳ Pending | |
+| Database Schema | ⏳ Pending | |
+| Auth API | ⏳ Pending | |
+| Project API | ⏳ Pending | |
+| Task API | ⏳ Pending | |
+| WebSocket | ⏳ Pending | |
+| Frontend Setup | ⏳ Pending | |
+| Auth Pages | ⏳ Pending | |
+| Kanban Board | ⏳ Pending | |
+| Task Modal | ⏳ Pending | |
+| Dark Mode | ⏳ Pending | |
+| Mobile UI | ⏳ Pending | |
+| PWA | ⏳ Pending | |
+
+---
+
+*End of Specification*

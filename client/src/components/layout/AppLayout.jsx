@@ -1,0 +1,45 @@
+import { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { Sidebar } from './Sidebar';
+import { Header } from './Header';
+import { MobileNav } from './MobileNav';
+
+export function AppLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Desktop sidebar - always visible on lg screens */}
+      <div className="hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:z-30">
+        <Sidebar isOpen={true} onClose={() => {}} />
+      </div>
+
+      {/* Mobile sidebar - slide out drawer */}
+      <div className="lg:hidden">
+        <Sidebar 
+          isOpen={sidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+        />
+      </div>
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main content */}
+      <div className="min-h-screen lg:pl-64">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        
+        <main className="p-4 pb-20 lg:pb-4">
+          <Outlet />
+        </main>
+      </div>
+
+      <MobileNav />
+    </div>
+  );
+}
