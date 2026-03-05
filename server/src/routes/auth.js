@@ -94,6 +94,9 @@ async function findOrCreateOAuthUser(provider, providerId, profileData) {
 function configureGoogleOAuth() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const oauthBaseUrl = (process.env.API_URL || 'http://localhost:5000')
+    .replace(/\/+$/, '')
+    .replace(/\/api$/, '');
   
   if (!clientId || !clientSecret) {
     console.warn('[OAuth] Google credentials not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env');
@@ -103,7 +106,7 @@ function configureGoogleOAuth() {
   return new GoogleStrategy({
     clientID: clientId,
     clientSecret: clientSecret,
-    callbackURL: `${process.env.API_URL || 'http://localhost:5000'}/api/auth/oauth/google/callback`,
+    callbackURL: `${oauthBaseUrl}/api/auth/oauth/google/callback`,
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value;

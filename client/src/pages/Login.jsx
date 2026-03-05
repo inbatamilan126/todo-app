@@ -4,6 +4,7 @@ import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
+import { API_URL } from '../utils/constants';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -56,7 +57,7 @@ export function Login() {
 
   const handleGoogleLogin = () => {
     const isMobile = window.innerWidth < 768;
-    const googleAuthUrl = `${import.meta.env.VITE_API_URL || '/api'}/auth/oauth/google`;
+    const googleAuthUrl = `${API_URL}/auth/oauth/google`;
     
     if (isMobile) {
       window.location.href = `${googleAuthUrl}?mobile=true`;

@@ -1,5 +1,24 @@
-// Use relative path to go through Vite proxy in development
-export const API_URL = '/api';
+// Use explicit API URL when provided, otherwise fallback to same-origin proxy path.
+// If a bare API domain is provided (e.g. https://api.example.com), append /api.
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const normalizedApiUrl = (() => {
+  if (!configuredApiUrl) return '/api';
+
+  const trimmed = configuredApiUrl.replace(/\/+$/, '');
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.pathname === '' || parsed.pathname === '/') {
+      return `${trimmed}/api`;
+    }
+  } catch {
+    // Non-absolute URL (e.g. /api) - use as provided.
+  }
+
+  return trimmed;
+})();
+
+export const API_URL = normalizedApiUrl;
 // Empty string means "same origin" for socket.io client.
 export const WS_URL = import.meta.env.VITE_WS_URL || '';
 

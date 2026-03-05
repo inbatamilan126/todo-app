@@ -3,6 +3,10 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import prisma from './db.js';
 
 export function configurePassport() {
+  const oauthBaseUrl = (process.env.API_URL || 'http://localhost:5000')
+    .replace(/\/+$/, '')
+    .replace(/\/api$/, '');
+
   passport.serializeUser((user, done) => done(null, user.id));
   
   passport.deserializeUser(async (id, done) => {
@@ -18,7 +22,7 @@ export function configurePassport() {
     passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${process.env.API_URL || 'http://localhost:5000'}/api/auth/oauth/google/callback`,
+      callbackURL: `${oauthBaseUrl}/api/auth/oauth/google/callback`,
     }, async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await prisma.user.findFirst({
