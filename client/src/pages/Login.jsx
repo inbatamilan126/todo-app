@@ -56,11 +56,18 @@ export function Login() {
   }, [navigate, loginWithToken]);
 
   const handleGoogleLogin = () => {
-    const isMobile = window.innerWidth < 768;
+    // More reliable mobile detection: check for touch capability and screen size
+    const isMobile = (window.innerWidth < 768) || 
+                     ('ontouchstart' in window) || 
+                     (navigator.maxTouchPoints > 0);
     const googleAuthUrl = `${API_URL}/auth/oauth/google`;
     
+    console.log('[OAuth] Initiating login, isMobile:', isMobile, 'width:', window.innerWidth);
+    
     if (isMobile) {
-      window.location.href = `${googleAuthUrl}?mobile=true`;
+      const redirectUrl = `${googleAuthUrl}?mobile=true`;
+      console.log('[OAuth] Mobile redirect to:', redirectUrl);
+      window.location.href = redirectUrl;
     } else {
       setOauthLoading(true);
       const width = 500;

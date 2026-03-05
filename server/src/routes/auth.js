@@ -296,6 +296,9 @@ router.get('/oauth/google/callback', (req, res, next) => {
     return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
   }
   
+  // Debug: Log the query params to diagnose mobile flow
+  console.log('[OAuth] Callback received, query params:', req.query);
+  
   passport.authenticate('google', { session: false }, async (err, user, info) => {
     if (err) {
       console.error('[OAuth] Callback error:', err);
@@ -326,7 +329,13 @@ router.get('/oauth/google/callback', (req, res, next) => {
       });
       
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-      const isMobile = req.query.mobile === 'true';
+      // More robust mobile detection: check both query param and User-Agent
+      const userAgent = req.get('User-Agent') || '';
+      const isMobileByUA = /Mobile|Android|iPhone|iPad|iPod|webOS|BlackBerry|Opera Mini/i.test(userAgent);
+      const isMobileByQuery = req.query.mobile === 'true';
+      const isMobile = isMobileByQuery || isMobileByUA;
+      
+      console.log('[OAuth] isMobile:', isMobile, 'byQuery:', isMobileByQuery, 'byUA:', isMobileByUA, 'Client URL:', clientUrl);
       
       if (isMobile) {
         // Mobile: redirect with token
