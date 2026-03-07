@@ -56,13 +56,12 @@ export function Login() {
   }, [navigate, loginWithToken]);
 
   const handleGoogleLogin = () => {
-    // More reliable mobile detection: check for touch capability and screen size
-    const isMobile = (window.innerWidth < 768) || 
-                     ('ontouchstart' in window) || 
-                     (navigator.maxTouchPoints > 0);
-    const googleAuthUrl = `${API_URL}/auth/oauth/google`;
+    // Use ONLY viewport width for mobile detection - this is the most reliable
+    // because viewport size immediately updates when resizing/disabling emulation.
+    // Touch events (ontouchstart, maxTouchPoints) can persist after disabling emulation.
+    const isMobile = window.innerWidth < 768;
     
-    console.log('[OAuth] Initiating login, isMobile:', isMobile, 'width:', window.innerWidth);
+    const googleAuthUrl = `${API_URL}/auth/oauth/google`;
     
     if (isMobile) {
       const redirectUrl = `${googleAuthUrl}?mobile=true`;

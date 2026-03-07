@@ -297,7 +297,7 @@ router.get('/oauth/google/callback', (req, res, next) => {
   }
   
   // Debug: Log the query params to diagnose mobile flow
-  console.log('[OAuth] Callback received, query params:', req.query);
+  console.log('[OAuth] Callback received:', req.query);
   
   passport.authenticate('google', { session: false }, async (err, user, info) => {
     if (err) {
