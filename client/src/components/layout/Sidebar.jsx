@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -19,6 +19,11 @@ const PROJECT_COLORS = [
 
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
+  
+  // Debug: Log whenever user changes
+  useEffect(() => {
+    console.log('[Sidebar useEffect] user changed:', user);
+  }, [user]);
   
   console.log('[Sidebar] Render - user:', user, 'isOpen:', isOpen);
   
