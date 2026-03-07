@@ -19,13 +19,11 @@ export function AuthProvider({ children }) {
           // Save token to localStorage first (needed for API interceptor)
           localStorage.setItem('token', urlToken);
           
-          console.log('[Auth] Token from URL, fetching user...');
-          
           // Call API to get user
           const response = await api.get('/auth/me');
-          const userData = response.data;
           
-          console.log('[Auth] User data from API:', userData);
+          // /auth/me returns { user: <object> }, extract the user object
+          const userData = response.data.user || response.data;
           
           localStorage.setItem('user', JSON.stringify(userData));
           setUser(userData);
@@ -142,7 +140,10 @@ export function AuthProvider({ children }) {
     
     try {
       const response = await api.get('/auth/me');
-      const userData = response.data;
+      
+      // /auth/me returns { user: <object> }, extract the user object
+      const userData = response.data.user || response.data;
+      
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       
