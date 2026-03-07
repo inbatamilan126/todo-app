@@ -159,8 +159,8 @@ export function Sidebar({ isOpen, onClose }) {
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 truncate">
-              <p className="truncate text-sm font-medium">{user?.name}</p>
-              <p className="truncate text-xs text-gray-500">{user?.email}</p>
+              <p className="truncate text-sm font-medium">NAME: {user?.name || 'EMPTY'}</p>
+              <p className="truncate text-xs text-gray-500">EMAIL: {user?.email || 'EMPTY'}</p>
             </div>
           </div>
           <div className="mt-1 flex gap-1">
