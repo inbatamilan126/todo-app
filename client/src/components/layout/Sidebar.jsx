@@ -19,6 +19,9 @@ const PROJECT_COLORS = [
 
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
+  
+  console.log('[Sidebar] user:', user);
+  
   const { projects, createProject, updateProject, deleteProject } = useProjects();
   const navigate = useNavigate();
 

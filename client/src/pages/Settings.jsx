@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Input } from '../components/common/Input';
@@ -10,6 +10,13 @@ export function Settings() {
   const { theme, setTheme } = useTheme();
 
   const [name, setName] = useState(user?.name || '');
+  
+  // Update name when user changes
+  useEffect(() => {
+    if (user?.name) {
+      setName(user.name);
+    }
+  }, [user]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
