@@ -19,9 +19,13 @@ export function AuthProvider({ children }) {
           // Save token to localStorage first (needed for API interceptor)
           localStorage.setItem('token', urlToken);
           
+          console.log('[Auth] Token from URL, fetching user...');
+          
           // Call API to get user
           const response = await api.get('/auth/me');
           const userData = response.data;
+          
+          console.log('[Auth] User data from API:', userData);
           
           localStorage.setItem('user', JSON.stringify(userData));
           setUser(userData);

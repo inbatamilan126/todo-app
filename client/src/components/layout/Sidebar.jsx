@@ -19,11 +19,6 @@ const PROJECT_COLORS = [
 
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
-  
-  // Identify which sidebar: mobile closed, mobile open, or desktop
-  const sidebarType = !isOpen ? 'MOBILE_CLOSED' : (window.innerWidth >= 1024 ? 'DESKTOP' : 'MOBILE_OPEN');
-  console.log(`[Sidebar ${sidebarType}] user:`, user);
-  
   const { projects, createProject, updateProject, deleteProject } = useProjects();
   const navigate = useNavigate();
 
@@ -155,14 +150,14 @@ export function Sidebar({ isOpen, onClose }) {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-gray-200 p-3 dark:border-gray-800 bg-red-500">
-          <div className="flex items-center gap-3 rounded-lg p-2 bg-blue-500">
+        <div className="border-t border-gray-200 p-3 dark:border-gray-800">
+          <div className="flex items-center gap-3 rounded-lg p-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600 dark:bg-primary-900 dark:text-primary-400">
               {user?.name?.charAt(0).toUpperCase() || '?'}
             </div>
-            <div className="flex-1 truncate bg-yellow-500">
-              <p className="truncate text-sm font-medium">TEST: {user?.name || 'EMPTY'}</p>
-              <p className="truncate text-xs text-gray-500">EMAIL: {user?.email || 'EMPTY'}</p>
+            <div className="flex-1 truncate">
+              <p className="truncate text-sm font-medium">{user?.name || 'Unknown'}</p>
+              <p className="truncate text-xs text-gray-500">{user?.email || 'No email'}</p>
             </div>
           </div>
           <div className="mt-1 flex gap-1">
