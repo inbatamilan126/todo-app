@@ -74,8 +74,9 @@ export function Login() {
       const height = 600;
       const left = (window.innerWidth - width) / 2;
       const top = (window.innerHeight - height) / 2;
+      // Pass popup=true to tell server this is a popup flow, bypassing UA-based detection
       const popup = window.open(
-        googleAuthUrl,
+        `${googleAuthUrl}?popup=true`,
         'Google Login',
         `width=${width},height=${height},left=${left},top=${top}`
       );

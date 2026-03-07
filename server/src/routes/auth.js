@@ -329,13 +329,17 @@ router.get('/oauth/google/callback', (req, res, next) => {
       });
       
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-      // More robust mobile detection: check both query param and User-Agent
+      // More robust mobile detection: respect explicit client intent over UA sniffing
+      const wantsPopup = req.query.popup === 'true';
+      const wantsMobile = req.query.mobile === 'true';
       const userAgent = req.get('User-Agent') || '';
-      const isMobileByUA = /Mobile|Android|iPhone|iPad|iPod|webOS|BlackBerry|Opera Mini/i.test(userAgent);
-      const isMobileByQuery = req.query.mobile === 'true';
-      const isMobile = isMobileByQuery || isMobileByUA;
+      // More conservative UA detection - only true mobile devices, not desktop browsers
+      const isMobileByUA = /Android.*Mobile|iPhone.*Mobile/i.test(userAgent);
       
-      console.log('[OAuth] isMobile:', isMobile, 'byQuery:', isMobileByQuery, 'byUA:', isMobileByUA, 'Client URL:', clientUrl);
+      // Prioritize explicit client intent; only use UA as fallback when no explicit preference
+      const isMobile = wantsMobile || (!wantsPopup && isMobileByUA);
+      
+      console.log('[OAuth] isMobile:', isMobile, 'wantsPopup:', wantsPopup, 'wantsMobile:', wantsMobile, 'byUA:', isMobileByUA, 'Client URL:', clientUrl);
       
       if (isMobile) {
         // Mobile: redirect with token
