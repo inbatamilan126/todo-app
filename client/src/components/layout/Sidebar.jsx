@@ -20,7 +20,9 @@ const PROJECT_COLORS = [
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
   
-  console.log('[Sidebar] Render - user:', user, 'isOpen:', isOpen);
+  // Identify which sidebar: mobile closed, mobile open, or desktop
+  const sidebarType = !isOpen ? 'MOBILE_CLOSED' : (window.innerWidth >= 1024 ? 'DESKTOP' : 'MOBILE_OPEN');
+  console.log(`[Sidebar ${sidebarType}] user:`, user);
   
   const { projects, createProject, updateProject, deleteProject } = useProjects();
   const navigate = useNavigate();
