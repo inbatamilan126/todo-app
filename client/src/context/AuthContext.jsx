@@ -10,6 +10,36 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initAuth = async () => {
+      // First: Check if token exists in URL (mobile OAuth redirect)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get('token');
+      
+      if (urlToken) {
+        try {
+          // Call API to get user, then clean URL
+          const response = await api.get('/auth/me');
+          const userData = response.data;
+          
+          localStorage.setItem('token', urlToken);
+          localStorage.setItem('user', JSON.stringify(userData));
+          setUser(userData);
+          
+          // Clean URL - remove token param
+          window.history.replaceState({}, '', '/dashboard');
+          
+          try {
+            socketService.connect(urlToken);
+          } catch (e) {
+            console.warn('Socket connection failed:', e);
+          }
+        } catch (e) {
+          console.error('Failed to authenticate from URL token:', e);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      // Original flow: Check localStorage for existing session
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
 

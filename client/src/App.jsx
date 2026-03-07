@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { Login } from './pages/Login';
@@ -9,21 +8,7 @@ import { ProjectView } from './pages/ProjectView';
 import { Settings } from './pages/Settings';
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading, loginWithToken } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      loginWithToken(token).then(() => {
-        searchParams.delete('token');
-        setSearchParams(searchParams);
-      }).catch(() => {
-        navigate('/login');
-      });
-    }
-  }, [searchParams, loginWithToken, navigate, setSearchParams]);
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
