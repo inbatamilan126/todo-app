@@ -20,7 +20,7 @@ const PROJECT_COLORS = [
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
   
-  console.log('[Sidebar] user:', user);
+  console.log('[Sidebar] Render - user:', user, 'isOpen:', isOpen);
   
   const { projects, createProject, updateProject, deleteProject } = useProjects();
   const navigate = useNavigate();
