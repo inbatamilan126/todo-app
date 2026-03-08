@@ -64,6 +64,26 @@ router.post('/', validate(createProjectSchema), async (req, res, next) => {
   }
 });
 
+// Reorder projects - MUST be before /:id
+router.put('/reorder', validate(reorderProjectsSchema), async (req, res, next) => {
+  try {
+    const { projects } = req.body;
+
+    await prisma.$transaction(
+      projects.map((p) =>
+        prisma.project.update({
+          where: { id: p.id },
+          data: { position: p.position },
+        })
+      )
+    );
+
+    res.json({ message: 'Projects reordered successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get single project
 router.get('/:id', async (req, res, next) => {
   try {
@@ -143,26 +163,6 @@ router.delete('/:id', async (req, res, next) => {
     await prisma.project.delete({ where: { id } });
 
     res.json({ message: 'Project deleted successfully' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Reorder projects
-router.put('/reorder', validate(reorderProjectsSchema), async (req, res, next) => {
-  try {
-    const { projects } = req.body;
-
-    await prisma.$transaction(
-      projects.map((p) =>
-        prisma.project.update({
-          where: { id: p.id },
-          data: { position: p.position },
-        })
-      )
-    );
-
-    res.json({ message: 'Projects reordered successfully' });
   } catch (error) {
     next(error);
   }
