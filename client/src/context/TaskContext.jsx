@@ -56,30 +56,59 @@ export function TaskProvider({ children }) {
   };
 
   const moveTask = async (taskId, status, position) => {
-    const response = await api.put(`/tasks/${taskId}/move`, { status, position });
-    const updatedTask = response.data.task;
+    const previousTasks = [...tasks];
+    // Optimistic update
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? updatedTask : t))
+      prev.map((t) => (t.id === taskId ? { ...t, status, position } : t))
     );
-    return updatedTask;
+
+    try {
+      const response = await api.put(`/tasks/${taskId}/move`, { status, position });
+      const updatedTask = response.data.task;
+      // Sync with server response
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? updatedTask : t))
+      );
+      return updatedTask;
+    } catch (err) {
+      console.error('Failed to move task:', err);
+      setTasks(previousTasks);
+      throw err;
+    }
   };
 
   const reorderTasks = async (reorderedTasks) => {
-    const response = await api.put('/tasks/reorder', {
-      tasks: reorderedTasks.map((t, index) => ({
-        id: t.id,
-        position: index,
-        status: t.status,
-      })),
-    });
-    const updatedTasks = response.data.tasks;
+    const previousTasks = [...tasks];
+    // Optimistic update
     setTasks((prev) => {
-      const taskIds = new Set(updatedTasks.map((t) => t.id));
+      const taskIds = new Set(reorderedTasks.map((t) => t.id));
       return [
         ...prev.filter((t) => !taskIds.has(t.id)),
-        ...updatedTasks,
+        ...reorderedTasks,
       ];
     });
+
+    try {
+      const response = await api.put('/tasks/reorder', {
+        tasks: reorderedTasks.map((t, index) => ({
+          id: t.id,
+          position: index,
+          status: t.status,
+        })),
+      });
+      const updatedTasks = response.data.tasks;
+      setTasks((prev) => {
+        const taskIds = new Set(updatedTasks.map((t) => t.id));
+        return [
+          ...prev.filter((t) => !taskIds.has(t.id)),
+          ...updatedTasks,
+        ];
+      });
+    } catch (err) {
+      console.error('Failed to reorder tasks:', err);
+      setTasks(previousTasks);
+      throw err;
+    }
   };
 
   const addSubtask = async (parentId, title) => {

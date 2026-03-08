@@ -68,13 +68,22 @@ export function ProjectProvider({ children }) {
   };
 
   const reorderProjects = async (reorderedProjects) => {
-    await api.put('/projects/reorder', {
-      projects: reorderedProjects.map((p, index) => ({
-        id: p.id,
-        position: index,
-      })),
-    });
+    const previousProjects = [...projects];
+    // Optimistic update
     setProjects(reorderedProjects);
+
+    try {
+      await api.put('/projects/reorder', {
+        projects: reorderedProjects.map((p, index) => ({
+          id: p.id,
+          position: index,
+        })),
+      });
+    } catch (error) {
+      console.error('Failed to reorder projects:', error);
+      // Rollback on error
+      setProjects(previousProjects);
+    }
   };
 
   return (
