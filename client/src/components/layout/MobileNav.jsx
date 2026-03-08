@@ -3,10 +3,9 @@ import { Home, Sun, Calendar, Plus, User } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const navItems = [
+  { to: '/dashboard', icon: Home, label: 'All Projects' },
   { to: '/today', icon: Sun, label: 'Today' },
-  { to: '/dashboard', icon: Home, label: 'Home' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
-  { to: '/settings', icon: User, label: 'Profile' },
 ];
 
 export function MobileNav() {
@@ -30,7 +29,7 @@ export function MobileNav() {
         </NavLink>
       ))}
       <button
-        onClick={() => window.dispatchEvent(new CustomEvent('open-new-project-modal'))}
+        onClick={() => window.dispatchEvent(new CustomEvent('open-new-task-modal'))}
         className="flex -mt-6 flex-col items-center gap-1 p-2 text-gray-500 dark:text-gray-400"
       >
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30">

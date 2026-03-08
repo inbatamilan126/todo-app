@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
+import { TaskModal } from '../task/TaskModal';
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenTaskModal = () => setIsTaskModalOpen(true);
+    window.addEventListener('open-new-task-modal', handleOpenTaskModal);
+    return () => window.removeEventListener('open-new-task-modal', handleOpenTaskModal);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -40,6 +48,11 @@ export function AppLayout() {
       </div>
 
       <MobileNav />
+
+      <TaskModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)} 
+      />
     </div>
   );
 }
