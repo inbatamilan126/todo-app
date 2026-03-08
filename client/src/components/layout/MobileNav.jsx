@@ -3,8 +3,8 @@ import { Home, Sun, Calendar, Plus, User } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const navItems = [
-  { to: '/dashboard', icon: Home, label: 'All Projects' },
   { to: '/today', icon: Sun, label: 'Today' },
+  { to: '/dashboard', icon: Home, label: 'All Projects' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
 ];
 

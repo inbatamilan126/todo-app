@@ -76,7 +76,7 @@ export function Sidebar({ isOpen, onClose }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3">
           <NavLink
-            to="/dashboard"
+            to="/today"
             onClick={onClose}
             className={({ isActive }) =>
               cn(
@@ -87,12 +87,12 @@ export function Sidebar({ isOpen, onClose }) {
               )
             }
           >
-            <LayoutDashboard className="h-5 w-5 text-indigo-500" />
-            All Projects
+            <Sun className="h-5 w-5 text-amber-500" />
+            Today
           </NavLink>
 
           <NavLink
-            to="/today"
+            to="/dashboard"
             onClick={onClose}
             className={({ isActive }) =>
               cn(
@@ -103,8 +103,8 @@ export function Sidebar({ isOpen, onClose }) {
               )
             }
           >
-            <Sun className="h-5 w-5 text-amber-500" />
-            Today
+            <LayoutDashboard className="h-5 w-5 text-indigo-500" />
+            All Projects
           </NavLink>
 
           <NavLink
