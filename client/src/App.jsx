@@ -6,6 +6,8 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectView } from './pages/ProjectView';
 import { Settings } from './pages/Settings';
+import { TodayView } from './pages/TodayView';
+import { CalendarView } from './pages/CalendarView';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -73,6 +75,8 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/today" element={<TodayView />} />
+        <Route path="/calendar" element={<CalendarView />} />
         <Route path="/projects" element={<Dashboard />} />
         <Route path="/projects/new" element={<Dashboard />} />
         <Route path="/projects/:id" element={<ProjectView />} />

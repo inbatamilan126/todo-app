@@ -6,11 +6,14 @@ import {
   LogOut,
   MoreVertical,
   LayoutDashboard,
+  Sun,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useProjects } from '../../context/ProjectContext';
 import { cn } from '../../utils/cn';
 import { Button } from '../common/Button';
+import { LabelManager } from '../common/LabelManager';
 
 const PROJECT_COLORS = [
   '#3b82f6', '#ef4444', '#22c55e', '#eab308', 
@@ -27,6 +30,8 @@ export function Sidebar({ isOpen, onClose }) {
   const [newProjectColor, setNewProjectColor] = useState(PROJECT_COLORS[0]);
   const [editingProject, setEditingProject] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  
+  const [showLabelManager, setShowLabelManager] = useState(false);
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
@@ -82,9 +87,53 @@ export function Sidebar({ isOpen, onClose }) {
               )
             }
           >
-            <LayoutDashboard className="h-5 w-5" />
+            <LayoutDashboard className="h-5 w-5 text-indigo-500" />
             All Projects
           </NavLink>
+
+          <NavLink
+            to="/today"
+            onClick={onClose}
+            className={({ isActive }) =>
+              cn(
+                'mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+              )
+            }
+          >
+            <Sun className="h-5 w-5 text-amber-500" />
+            Today
+          </NavLink>
+
+          <NavLink
+            to="/calendar"
+            onClick={onClose}
+            className={({ isActive }) =>
+              cn(
+                'mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+              )
+            }
+          >
+            <Calendar className="h-5 w-5 text-emerald-500" />
+            Calendar
+          </NavLink>
+
+          {/* Labels Manager Trigger */}
+          <button
+            onClick={() => setShowLabelManager(true)}
+            className="w-full mt-1 flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-5 w-5 items-center justify-center">#</span>
+              Tags / Labels
+            </div>
+            <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+          </button>
 
           {/* Projects List */}
           <div className="mt-4">
@@ -314,6 +363,9 @@ export function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
       )}
+
+      {/* Label Manager Modal */}
+      <LabelManager isOpen={showLabelManager} onClose={() => setShowLabelManager(false)} />
     </>
   );
 }

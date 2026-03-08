@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, FolderKanban, Plus, Bell, User } from 'lucide-react';
+import { Home, Sun, Calendar, Plus, User } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const navItems = [
+  { to: '/today', icon: Sun, label: 'Today' },
   { to: '/dashboard', icon: Home, label: 'Home' },
-  { to: '/projects', icon: FolderKanban, label: 'Projects' },
-  { to: '/notifications', icon: Bell, label: 'Alerts' },
+  { to: '/calendar', icon: Calendar, label: 'Calendar' },
   { to: '/settings', icon: User, label: 'Profile' },
 ];
 
