@@ -16,6 +16,7 @@ import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
 import taskRoutes from './routes/tasks.js';
 import notificationRoutes from './routes/notifications.js';
+import labelRoutes from './routes/labels.js';
 
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/labels', labelRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

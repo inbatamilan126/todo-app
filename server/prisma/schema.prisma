@@ -22,6 +22,7 @@ model User {
   projects      Project[]
   tasks         Task[]
   notifications Notification[]
+  labels        Label[]
 
   @@map("users")
 }
@@ -60,6 +61,7 @@ model Task {
   parent     Task?        @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
   subtasks   Task[]       @relation("Subtasks")
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  labels     Label[]     @relation("TaskLabels")
 
   @@index([projectId])
   @@index([userId])
@@ -81,4 +83,19 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+model Label {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  color     String   @default("#64748b")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]   @relation("TaskLabels")
+
+  @@index([userId])
+  @@map("labels")
 }

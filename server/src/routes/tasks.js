@@ -8,6 +8,67 @@ const router = express.Router();
 
 router.use(authenticate);
 
+// Get all tasks for user (cross-project)
+router.get('/', async (req, res, next) => {
+  try {
+    const { filter } = req.query; // e.g., 'today'
+    
+    let dateFilter = {};
+    if (filter === 'today') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Tasks due today OR overdue tasks that are not done
+      dateFilter = {
+        OR: [
+          {
+            dueDate: {
+              gte: todayStart,
+              lte: todayEnd,
+            },
+          },
+          {
+            dueDate: {
+              lt: todayStart,
+            },
+            status: {
+              not: 'done',
+            },
+          },
+        ]
+      };
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        userId: req.user.id,
+        parentId: null,
+        ...dateFilter,
+      },
+      include: {
+        project: {
+          select: { name: true, color: true }
+        },
+        labels: true,
+        subtasks: {
+          orderBy: { position: 'asc' },
+        },
+      },
+      orderBy: [
+        { dueDate: 'asc' },
+        { priority: 'desc' },
+      ],
+    });
+
+    res.json({ tasks });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get tasks for a project
 router.get('/project/:projectId', async (req, res, next) => {
   try {
@@ -27,6 +88,7 @@ router.get('/project/:projectId', async (req, res, next) => {
         parentId: null, // Only main tasks
       },
       include: {
+        labels: true,
         subtasks: {
           orderBy: { position: 'asc' },
         },
@@ -77,8 +139,14 @@ router.post('/project/:projectId', validate(createTaskSchema), async (req, res, 
         status: taskStatus,
         position,
         parentId: parentId || null,
+        ...(req.body.labelIds?.length > 0 && {
+          labels: {
+            connect: req.body.labelIds.map((id) => ({ id })),
+          },
+        }),
       },
       include: {
+        labels: true,
         subtasks: true,
       },
     });
@@ -103,6 +171,7 @@ router.get('/:id', async (req, res, next) => {
     const task = await prisma.task.findFirst({
       where: { id, userId: req.user.id },
       include: {
+        labels: true,
         subtasks: {
           orderBy: { position: 'asc' },
         },
@@ -142,8 +211,14 @@ router.put('/:id', validate(updateTaskSchema), async (req, res, next) => {
         ...(priority && { priority }),
         ...(status && { status }),
         ...(position !== undefined && { position }),
+        ...(req.body.labelIds !== undefined && {
+          labels: {
+            set: req.body.labelIds.map((id) => ({ id })),
+          },
+        }),
       },
       include: {
+        labels: true,
         subtasks: true,
       },
     });
@@ -226,7 +301,7 @@ router.put('/:id/move', validate(moveTaskSchema), async (req, res, next) => {
 
     const updated = await prisma.task.findUnique({
       where: { id },
-      include: { subtasks: true },
+      include: { labels: true, subtasks: true },
     });
 
     // Emit socket event
