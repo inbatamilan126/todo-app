@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../services/api';
 import socketService from '../services/socket';
+import { useAuth } from './AuthContext';
 
 const ProjectContext = createContext(null);
 
@@ -8,6 +9,7 @@ export function ProjectProvider({ children }) {
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -20,6 +22,12 @@ export function ProjectProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProjects();
+    }
+  }, [isAuthenticated, fetchProjects]);
 
   useEffect(() => {
     const handleTaskChange = () => {

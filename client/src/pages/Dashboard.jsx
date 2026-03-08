@@ -25,10 +25,6 @@ export function Dashboard() {
   ];
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
-
-  useEffect(() => {
     const handleOpenModal = () => setShowNewProject(true);
     window.addEventListener('open-new-project-modal', handleOpenModal);
     return () => window.removeEventListener('open-new-project-modal', handleOpenModal);

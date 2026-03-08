@@ -251,6 +251,9 @@ router.post('/project/:projectId', validate(createTaskSchema), async (req, res, 
       include: {
         labels: true,
         subtasks: true,
+        project: {
+          select: { name: true, color: true }
+        },
       },
     });
 
@@ -275,6 +278,9 @@ router.get('/:id', async (req, res, next) => {
       where: { id, userId: req.user.id },
       include: {
         labels: true,
+        project: {
+          select: { name: true, color: true }
+        },
         subtasks: {
           orderBy: { position: 'asc' },
         },
@@ -323,6 +329,9 @@ router.put('/:id', validate(updateTaskSchema), async (req, res, next) => {
       include: {
         labels: true,
         subtasks: true,
+        project: {
+          select: { name: true, color: true }
+        },
       },
     });
 
@@ -404,7 +413,13 @@ router.put('/:id/move', validate(moveTaskSchema), async (req, res, next) => {
 
     const updated = await prisma.task.findUnique({
       where: { id },
-      include: { labels: true, subtasks: true },
+      include: { 
+        labels: true, 
+        subtasks: true,
+        project: {
+          select: { name: true, color: true }
+        },
+      },
     });
 
     // Emit socket event
