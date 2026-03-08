@@ -1,7 +1,7 @@
 import express from 'express';
 import prisma from '../config/db.js';
 import { authenticate } from '../middleware/auth.js';
-import { createTaskSchema, updateTaskSchema, moveTaskSchema, createSubtaskSchema } from '../validators/taskValidator.js';
+import { createTaskSchema, updateTaskSchema, moveTaskSchema, createSubtaskSchema, reorderTasksSchema } from '../validators/taskValidator.js';
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
@@ -100,6 +100,109 @@ router.get('/project/:projectId', async (req, res, next) => {
     });
 
     res.json({ tasks });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Reorder tasks (bulk) - MUST be before /:id
+router.put('/reorder', validate(reorderTasksSchema), async (req, res, next) => {
+  try {
+    const { tasks } = req.body;
+
+    await prisma.$transaction(
+      tasks.map((t) =>
+        prisma.task.update({
+          where: { id: t.id },
+          data: { 
+            position: t.position,
+            ...(t.status && { status: t.status })
+          },
+        })
+      )
+    );
+
+    // Get the updated tasks to broadcast
+    const updatedTasks = await prisma.task.findMany({
+      where: {
+        id: { in: tasks.map(t => t.id) }
+      },
+      include: {
+        labels: true,
+        subtasks: true
+      }
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io && updatedTasks.length > 0) {
+      const projectId = updatedTasks[0].projectId;
+      io.to(`project:${projectId}`).emit('tasks:reordered', { tasks: updatedTasks });
+    }
+
+    res.json({ message: 'Tasks reordered successfully', tasks: updatedTasks });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update subtask - MUST be before /:id
+router.put('/subtasks/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, completed, position } = req.body;
+
+    const subtask = await prisma.task.findFirst({
+      where: { id, userId: req.user.id },
+    });
+
+    if (!subtask || !subtask.parentId) {
+      return res.status(404).json({ error: 'Subtask not found' });
+    }
+
+    const updated = await prisma.task.update({
+      where: { id },
+      data: {
+        ...(title && { title }),
+        ...(completed !== undefined && { status: completed ? 'done' : 'todo' }),
+        ...(position !== undefined && { position }),
+      },
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`project:${subtask.projectId}`).emit('task:updated', { task: updated });
+    }
+
+    res.json({ task: updated });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete subtask - MUST be before /:id
+router.delete('/subtasks/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const subtask = await prisma.task.findFirst({
+      where: { id, userId: req.user.id },
+    });
+
+    if (!subtask || !subtask.parentId) {
+      return res.status(404).json({ error: 'Subtask not found' });
+    }
+
+    await prisma.task.delete({ where: { id } });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`project:${subtask.projectId}`).emit('task:deleted', { taskId: id });
+    }
+
+    res.json({ message: 'Subtask deleted successfully' });
   } catch (error) {
     next(error);
   }
@@ -359,68 +462,6 @@ router.post('/:id/subtasks', validate(createSubtaskSchema), async (req, res, nex
     }
 
     res.status(201).json({ task: subtask });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Update subtask
-router.put('/subtasks/:id', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { title, completed, position } = req.body;
-
-    const subtask = await prisma.task.findFirst({
-      where: { id, userId: req.user.id },
-    });
-
-    if (!subtask || !subtask.parentId) {
-      return res.status(404).json({ error: 'Subtask not found' });
-    }
-
-    const updated = await prisma.task.update({
-      where: { id },
-      data: {
-        ...(title && { title }),
-        ...(completed !== undefined && { status: completed ? 'done' : 'todo' }),
-        ...(position !== undefined && { position }),
-      },
-    });
-
-    // Emit socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`project:${subtask.projectId}`).emit('task:updated', { task: updated });
-    }
-
-    res.json({ task: updated });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Delete subtask
-router.delete('/subtasks/:id', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    const subtask = await prisma.task.findFirst({
-      where: { id, userId: req.user.id },
-    });
-
-    if (!subtask || !subtask.parentId) {
-      return res.status(404).json({ error: 'Subtask not found' });
-    }
-
-    await prisma.task.delete({ where: { id } });
-
-    // Emit socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`project:${subtask.projectId}`).emit('task:deleted', { taskId: id });
-    }
-
-    res.json({ message: 'Subtask deleted successfully' });
   } catch (error) {
     next(error);
   }
