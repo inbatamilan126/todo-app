@@ -8,19 +8,26 @@ const TaskContext = createContext(null);
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null); // Added error state
   const currentProjectId = useRef(null);
 
   const fetchTasks = useCallback(async (projectId) => {
-    if (!projectId) return;
-    
-    currentProjectId.current = projectId;
+    currentProjectId.current = projectId; // Update currentProjectId ref
     setLoading(true);
+    setError(null); // Clear previous errors
     try {
-      const response = await api.get(`/tasks/project/${projectId}`);
+      const endpoint = projectId ? `/tasks/project/${projectId}` : '/tasks';
+      const response = await api.get(endpoint);
       setTasks(response.data.tasks);
-      socketService.joinProject(projectId);
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      if (projectId) {
+        socketService.joinProject(projectId);
+      } else if (currentProjectId.current) {
+        // If fetching all tasks, ensure we leave any previously joined project
+        socketService.leaveProject(currentProjectId.current);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+      setError(err.response?.data?.error || 'Failed to fetch tasks');
     } finally {
       setLoading(false);
     }
@@ -55,6 +62,24 @@ export function TaskProvider({ children }) {
       prev.map((t) => (t.id === taskId ? updatedTask : t))
     );
     return updatedTask;
+  };
+
+  const reorderTasks = async (reorderedTasks) => {
+    const response = await api.put('/tasks/reorder', {
+      tasks: reorderedTasks.map((t, index) => ({
+        id: t.id,
+        position: index,
+        status: t.status,
+      })),
+    });
+    const updatedTasks = response.data.tasks;
+    setTasks((prev) => {
+      const taskIds = new Set(updatedTasks.map((t) => t.id));
+      return [
+        ...prev.filter((t) => !taskIds.has(t.id)),
+        ...updatedTasks,
+      ];
+    });
   };
 
   const addSubtask = async (parentId, title) => {
@@ -123,6 +148,16 @@ export function TaskProvider({ children }) {
       case 'task:deleted':
         setTasks((prev) => prev.filter((t) => t.id !== data.taskId));
         break;
+      case 'tasks:reordered': {
+        setTasks((prev) => {
+          const updatedIds = new Set(data.tasks.map((t) => t.id));
+          return [
+            ...prev.filter((t) => !updatedIds.has(t.id)),
+            ...data.tasks,
+          ];
+        });
+        break;
+      }
       default:
         break;
     }
@@ -138,6 +173,7 @@ export function TaskProvider({ children }) {
         updateTask,
         deleteTask,
         moveTask,
+        reorderTasks,
         addSubtask,
         updateSubtask,
         deleteSubtask,
