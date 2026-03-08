@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn';
 import { PriorityBadge } from '../common/Badge';
 import { formatDate, isDueOverdue } from '../../utils/helpers';
 
-export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering = true }) {
+export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering = true, showProject = true }) {
   const {
     attributes,
     listeners,
@@ -60,7 +60,7 @@ export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering 
       </div>
 
       {/* Project Indicator (For Global Views) */}
-      {task.project && (
+      {showProject && task.project && (
         <div className="mb-2 flex items-center gap-1.5">
           <span 
             className="h-2 w-2 rounded-full" 
