@@ -130,6 +130,9 @@ router.put('/reorder', validate(reorderTasksSchema), async (req, res, next) => {
       include: {
         labels: true,
         subtasks: true
+      },
+      orderBy: {
+        position: 'asc'
       }
     });
 
