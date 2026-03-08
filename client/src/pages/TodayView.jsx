@@ -1,34 +1,35 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { useTasks } from '../context/TaskContext';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskModal } from '../components/task/TaskModal';
-import { useTasks } from '../context/TaskContext';
 
 export function TodayView() {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { tasks: contextTasks, loading, fetchTasks, reorderTasks } = useTasks();
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  
-  // To use moveTask which hits the /api/tasks/:id/move endpoint
-  const { moveTask } = useTasks();
-
-  const fetchTodayTasks = async () => {
-    try {
-      const response = await api.get('/tasks?filter=today');
-      setTasks(response.data.tasks);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchTodayTasks();
-  }, []);
+    fetchTasks(); // Fetch all tasks to filter locally for Today
+  }, [fetchTasks]);
+
+  const isSameDay = (d1, d2) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
+  const isTodayOrOverdue = (date) => {
+    if (!date) return false;
+    const d = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return d <= today || isSameDay(d, today);
+  };
+
+  const tasks = contextTasks.filter(t => isTodayOrOverdue(t.dueDate));
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
@@ -38,35 +39,6 @@ export function TodayView() {
   const handleAddTask = () => {
     setSelectedTask(null);
     setIsModalOpen(true);
-  };
-
-  const handleMoveTask = async (taskId, targetStatus, targetPosition) => {
-    // Fast optimistic UI update for local TodayView tasks state
-    const targetTask = tasks.find(t => t.id === taskId);
-    if (!targetTask) return;
-    
-    // Sort tasks in same target status
-    const columnTasks = tasks.filter(t => t.status === targetStatus && t.id !== taskId)
-                              .sort((a,b) => a.position - b.position);
-    
-    // Insert at position
-    columnTasks.splice(targetPosition, 0, { ...targetTask, status: targetStatus, position: targetPosition });
-    
-    // Fix subsequent positions
-    columnTasks.forEach((t, index) => { t.position = index; });
-
-    // Non-modified tasks
-    const otherTasks = tasks.filter(t => t.status !== targetStatus && t.id !== taskId);
-
-    setTasks([...otherTasks, ...columnTasks]);
-
-    // Persist to server
-    try {
-      await moveTask(taskId, targetStatus, targetPosition);
-    } catch (e) {
-      console.error("Failed to move task globally:", e);
-      fetchTodayTasks(); // Revert on failure
-    }
   };
 
   return (
@@ -85,9 +57,9 @@ export function TodayView() {
         ) : (
           <KanbanBoard 
             importedTasks={tasks} 
-            onMoveTask={handleMoveTask}
             onTaskClick={handleTaskClick} 
             onAddTask={handleAddTask} 
+            allowReordering={false}
           />
         )}
       </div>
@@ -99,8 +71,6 @@ export function TodayView() {
         onClose={() => {
           setIsModalOpen(false);
           setSelectedTask(null);
-          // Refetch to get any updates made in the modal
-          fetchTodayTasks();
         }}
       />
     </div>
