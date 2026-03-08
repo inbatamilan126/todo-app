@@ -27,4 +27,12 @@ export const createSubtaskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
 });
 
-export default { createTaskSchema, updateTaskSchema, moveTaskSchema, createSubtaskSchema };
+export const reorderTasksSchema = z.object({
+  tasks: z.array(z.object({
+    id: z.string().uuid(),
+    position: z.number().int().min(0),
+    status: z.enum(['todo', 'in_progress', 'done']).optional(),
+  })),
+});
+
+export default { createTaskSchema, updateTaskSchema, moveTaskSchema, createSubtaskSchema, reorderTasksSchema };
