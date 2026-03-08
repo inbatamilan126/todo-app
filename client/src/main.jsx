@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { TaskProvider } from './context/TaskContext';
+import { LabelProvider } from './context/LabelContext';
 import { registerSW } from 'virtual:pwa-register';
 import './styles/globals.css';
 
@@ -18,9 +19,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <AuthProvider>
           <ProjectProvider>
-            <TaskProvider>
-              <App />
-            </TaskProvider>
+            <LabelProvider>
+              <TaskProvider>
+                <App />
+              </TaskProvider>
+            </LabelProvider>
           </ProjectProvider>
         </AuthProvider>
       </ThemeProvider>

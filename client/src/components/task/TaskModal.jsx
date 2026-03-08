@@ -3,15 +3,19 @@ import { Modal } from '../common/Modal';
 import { TaskForm } from './TaskForm';
 import { SubtaskList } from './SubtaskList';
 import { useTasks } from '../../context/TaskContext';
+import { useProjects } from '../../context/ProjectContext';
 
-export function TaskModal({ task, isOpen, onClose, projectId, defaultStatus = 'todo' }) {
+export function TaskModal({ task, isOpen, onClose, projectId, defaultStatus = 'todo', defaultDueDate = null }) {
   const { createTask, updateTask, deleteTask, addSubtask, updateSubtask, deleteSubtask, tasks } = useTasks();
+  const { projects } = useProjects();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     dueDate: null,
     priority: 'medium',
     status: defaultStatus,
+    labelIds: [],
+    projectId: projectId || (projects?.length > 0 ? projects[0].id : ''),
   });
   const [loading, setLoading] = useState(false);
 
@@ -26,31 +30,44 @@ export function TaskModal({ task, isOpen, onClose, projectId, defaultStatus = 't
         dueDate: freshTask.dueDate || null,
         priority: freshTask.priority || 'medium',
         status: freshTask.status || 'todo',
+        labelIds: freshTask.labels?.map((l) => l.id) || [],
+        projectId: freshTask.projectId || '',
       });
     } else if (isOpen && !task) {
       setFormData({
         title: '',
         description: '',
-        dueDate: null,
+        dueDate: defaultDueDate,
         priority: 'medium',
         status: defaultStatus,
+        labelIds: [],
+        projectId: projectId || (projects?.length > 0 ? projects[0].id : ''),
       });
     }
-  }, [freshTask, isOpen, task, defaultStatus]);
+  }, [freshTask, isOpen, task, defaultStatus, defaultDueDate, projectId, projects]);
 
   const handleSubmit = async () => {
     if (!formData.title.trim()) return;
+
+    // Explicit project ID validation fallback
+    const targetProject = formData.projectId || projectId;
+
+    if (!task && !targetProject) {
+      alert('Please select a project first to create the task.');
+      return;
+    }
 
     setLoading(true);
     try {
       if (task) {
         await updateTask(task.id, formData);
       } else {
-        await createTask(projectId, formData);
+        await createTask(targetProject, formData);
       }
       onClose();
     } catch (error) {
       console.error('Failed to save task:', error);
+      alert('Failed to save task. See console.');
     } finally {
       setLoading(false);
     }
@@ -66,6 +83,7 @@ export function TaskModal({ task, isOpen, onClose, projectId, defaultStatus = 't
       onClose();
     } catch (error) {
       console.error('Failed to delete task:', error);
+      alert('Failed to delete task. See console.');
     } finally {
       setLoading(false);
     }
@@ -99,6 +117,7 @@ export function TaskModal({ task, isOpen, onClose, projectId, defaultStatus = 't
           loading={loading}
           isEdit={!!task}
           onDelete={handleDelete}
+          projects={!projectId ? projects : null} // Only pass projects if there's no fixed project constraint
         />
 
         {task && freshTask && (
