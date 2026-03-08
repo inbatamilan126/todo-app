@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Sun, Calendar, Plus, User } from 'lucide-react';
+import { LayoutDashboard, Sun, Calendar, Plus, User } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const navItems = [
-  { to: '/today', icon: Sun, label: 'Today' },
-  { to: '/dashboard', icon: Home, label: 'All Projects' },
-  { to: '/calendar', icon: Calendar, label: 'Calendar' },
+  { to: '/today', icon: Sun, label: 'Today', color: 'text-amber-500' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'All Projects', color: 'text-indigo-500' },
+  { to: '/calendar', icon: Calendar, label: 'Calendar', color: 'text-emerald-500' },
 ];
 
 export function MobileNav() {
@@ -17,15 +17,15 @@ export function MobileNav() {
           to={item.to}
           className={({ isActive }) =>
             cn(
-              'flex flex-col items-center gap-1 p-2',
+              'flex flex-col items-center gap-1 p-2 transition-colors',
               isActive
                 ? 'text-primary-600 dark:text-primary-400'
-                : 'text-gray-500 dark:text-gray-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
             )
           }
         >
-          <item.icon className="h-5 w-5" />
-          <span className="text-xs">{item.label}</span>
+          <item.icon className={cn("h-5 w-5", item.color)} />
+          <span className="text-xs font-medium">{item.label}</span>
         </NavLink>
       ))}
       <button
