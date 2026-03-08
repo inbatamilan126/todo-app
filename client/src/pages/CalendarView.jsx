@@ -22,6 +22,7 @@ export function CalendarView() {
   const [loading, setLoading] = useState(true);
   
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeDate, setActiveDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -157,71 +158,120 @@ export function CalendarView() {
           </div>
         </div>
 
-        {/* Mobile List View */}
+        {/* Mobile View */}
         <div className="flex lg:hidden flex-col gap-4 pb-20">
-          {calendarDays.filter(day => {
-            return isSameMonth(day, monthStart);
-          }).map(day => {
-            const dayTasks = tasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate), day));
-            const isTodayDate = isToday(day);
-            const isPastDate = isPast(day) && !isTodayDate;
-            
-            return (
-              <div key={day.toString()} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-                        isTodayDate 
-                          ? 'bg-primary-600 text-white' 
-                          : 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-                      }`}
-                    >
-                      {format(day, 'd')}
-                    </span>
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {format(day, 'EEEE')}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => handleDayClick(day)}
-                    className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                  >
-                    + Add Task
-                  </button>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                <div key={i} className="py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
+                  {day}
                 </div>
-                
-                {dayTasks.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">No tasks scheduled.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {dayTasks.map(task => (
-                      <button
-                        key={task.id}
-                        onClick={(e) => handleTaskClick(e, task)}
-                        className={`w-full text-left flex items-start gap-2 rounded-lg border border-gray-100 p-2.5 transition active:scale-[0.98] ${
-                          isPastDate && task.status !== 'done' ? 'bg-red-50/50 dark:bg-red-900/10' : 'bg-gray-50 dark:bg-gray-800/50'
-                        } dark:border-gray-700`}
+              ))}
+            </div>
+            
+            {/* Calendar Grid */}
+            <div className="p-2">
+              <div className="grid grid-cols-7 gap-y-2">
+                {calendarDays.map((day) => {
+                  const dayTasks = tasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate), day));
+                  const isCurrentMonth = isSameMonth(day, monthStart);
+                  const isTodayDate = isToday(day);
+                  const isSelected = isSameDay(day, activeDate);
+
+                  // Only show dots for up to 3 tasks to keep it clean
+                  const dots = dayTasks.slice(0, 3);
+
+                  return (
+                    <div 
+                      key={day.toString()} 
+                      onClick={() => {
+                        setActiveDate(day);
+                        if (!isCurrentMonth) {
+                          setCurrentDate(day);
+                        }
+                      }}
+                      className="flex flex-col items-center justify-start py-1 cursor-pointer"
+                    >
+                      <div 
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors ${
+                          isSelected
+                            ? 'bg-primary-600 text-white font-bold shadow-sm'
+                            : isTodayDate 
+                              ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-bold' 
+                              : isCurrentMonth 
+                                ? 'text-gray-700 dark:text-gray-300' 
+                                : 'text-gray-400 dark:text-gray-600'
+                        }`}
                       >
-                       <span 
-                          className="mt-0.5 h-2.5 w-2.5 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: task.project?.color || '#ccc' }}
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">
-                            {task.title}
-                          </p>
-                          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {task.project?.name || 'No Project'}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        {format(day, 'd')}
+                      </div>
+                      <div className="flex gap-0.5 mt-1 h-1.5">
+                        {dots.map((task, i) => (
+                          <span 
+                            key={i}
+                            className="h-1 w-1 rounded-full" 
+                            style={{ backgroundColor: task.project?.color || '#3b82f6' }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          </div>
+
+          {/* Selected Day Tasks */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2 dark:border-gray-700">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {isToday(activeDate) ? 'Today' : format(activeDate, 'EEEE, MMMM d')}
+              </div>
+              <button 
+                onClick={() => handleDayClick(activeDate)}
+                className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+              >
+                + Add Task
+              </button>
+            </div>
+            
+            {(() => {
+              const activeDayTasks = tasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate), activeDate));
+              const isPastDate = isPast(activeDate) && !isToday(activeDate);
+              
+              if (activeDayTasks.length === 0) {
+                return <p className="text-sm text-gray-500 dark:text-gray-400 italic">No tasks scheduled.</p>;
+              }
+              
+              return (
+                <div className="space-y-2">
+                  {activeDayTasks.map(task => (
+                    <button
+                      key={task.id}
+                      onClick={(e) => handleTaskClick(e, task)}
+                      className={`w-full text-left flex items-start gap-2 rounded-lg border border-gray-100 p-2.5 transition active:scale-[0.98] ${
+                        isPastDate && task.status !== 'done' ? 'bg-red-50/50 dark:bg-red-900/10' : 'bg-gray-50 dark:bg-gray-800/50'
+                      } dark:border-gray-700`}
+                    >
+                      <span 
+                        className="mt-0.5 h-2.5 w-2.5 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: task.project?.color || '#ccc' }}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">
+                          {task.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                          {task.project?.name || 'No Project'}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
