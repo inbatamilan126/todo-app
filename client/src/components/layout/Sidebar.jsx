@@ -16,7 +16,7 @@ import { Button } from '../common/Button';
 import { LabelManager } from '../common/LabelManager';
 
 const PROJECT_COLORS = [
-  '#3b82f6', '#ef4444', '#22c55e', '#eab308', 
+  '#3b82f6', '#ef4444', '#22c55e', '#eab308',
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'
 ];
 
@@ -30,7 +30,7 @@ export function Sidebar({ isOpen, onClose }) {
   const [newProjectColor, setNewProjectColor] = useState(PROJECT_COLORS[0]);
   const [editingProject, setEditingProject] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
-  
+
   const [showLabelManager, setShowLabelManager] = useState(false);
 
   const handleCreateProject = async () => {
@@ -260,9 +260,8 @@ export function Sidebar({ isOpen, onClose }) {
                     <button
                       key={color}
                       onClick={() => setNewProjectColor(color)}
-                      className={`h-8 w-8 rounded-full transition-transform ${
-                        newProjectColor === color ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : ''
-                      }`}
+                      className={`h-8 w-8 rounded-full transition-transform ${newProjectColor === color ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : ''
+                        }`}
                       style={{ backgroundColor: color }}
                     />
                   ))}
@@ -343,9 +342,8 @@ export function Sidebar({ isOpen, onClose }) {
                     <button
                       key={color}
                       onClick={() => setEditingProject({ ...editingProject, color })}
-                      className={`h-8 w-8 rounded-full transition-transform ${
-                        editingProject.color === color ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : ''
-                      }`}
+                      className={`h-8 w-8 rounded-full transition-transform ${editingProject.color === color ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : ''
+                        }`}
                       style={{ backgroundColor: color }}
                     />
                   ))}

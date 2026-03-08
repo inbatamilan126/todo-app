@@ -30,8 +30,8 @@ export function ProjectView() {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 dark:text-gray-400">Project not found</p>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-            Go to Dashboard
+          <Button variant="ghost" onClick={() => navigate('/today')}>
+            Go to Today
           </Button>
         </div>
       </div>

@@ -39,7 +39,7 @@ function PublicRoute({ children }) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/today" replace />;
   }
 
   return children;
@@ -84,8 +84,8 @@ export default function App() {
       </Route>
 
       {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/today" replace />} />
+      <Route path="*" element={<Navigate to="/today" replace />} />
     </Routes>
   );
 }

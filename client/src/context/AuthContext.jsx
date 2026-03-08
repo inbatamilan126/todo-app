@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
           setUser(userData);
           
           // Clean URL - remove token param
-          window.history.replaceState({}, '', '/dashboard');
+          window.history.replaceState({}, '', '/today');
           
           try {
             socketService.connect(urlToken);

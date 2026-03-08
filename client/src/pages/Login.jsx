@@ -42,11 +42,11 @@ export function Login() {
           window.dispatchEvent(new CustomEvent('auth:login', { 
             detail: { token: event.data.token, user: event.data.user } 
           }));
-          navigate('/dashboard');
+          navigate('/today');
         } else {
           // Fallback: call loginWithToken which fetches /me
           loginWithToken(event.data.token).then(() => {
-            navigate('/dashboard');
+            navigate('/today');
           });
         }
       }
@@ -94,7 +94,7 @@ export function Login() {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/today');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {

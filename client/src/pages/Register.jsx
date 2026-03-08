@@ -33,7 +33,7 @@ export function Register() {
 
     try {
       await register(name, email, password);
-      navigate('/dashboard');
+      navigate('/today');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
