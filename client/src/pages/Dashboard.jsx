@@ -44,7 +44,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       {/* Welcome */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -57,7 +57,7 @@ export function Dashboard() {
 
       {/* Projects Grid */}
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
@@ -82,12 +82,12 @@ export function Dashboard() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects.map((project) => (
             <Link
               key={project.id}
               to={`/projects/${project.id}`}
-              className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md dark:bg-gray-800"
+              className="group relative overflow-hidden rounded-xl bg-white p-6 lg:p-8 shadow-sm transition-all hover:shadow-md dark:bg-gray-800"
             >
               <div
                 className="absolute left-0 top-0 h-1 w-full"
@@ -110,7 +110,7 @@ export function Dashboard() {
           {/* Add Project Card */}
           <button
             onClick={() => setShowNewProject(true)}
-            className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-6 text-gray-500 transition-colors hover:border-primary-300 hover:bg-primary-50 dark:border-gray-700 dark:hover:border-primary-600 dark:hover:bg-primary-900/20"
+            className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-6 lg:p-8 text-gray-500 transition-colors hover:border-primary-300 hover:bg-primary-50 dark:border-gray-700 dark:hover:border-primary-600 dark:hover:bg-primary-900/20"
           >
             <Plus className="mb-2 h-8 w-8" />
             <span className="font-medium">New Project</span>
@@ -120,7 +120,7 @@ export function Dashboard() {
 
       {/* Quick Stats */}
       {projects.length > 0 && (
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Projects</p>
             <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
