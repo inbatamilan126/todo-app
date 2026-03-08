@@ -1,8 +1,8 @@
 # Todo App - Project Specification
 
-> **Version:** 1.0.0  
-> **Last Updated:** 2026-03-04  
-> **Status:** Planning Phase
+> **Version:** 1.1.0  
+> **Last Updated:** 2026-03-08  
+> **Status:** Active Development
 
 ---
 
@@ -87,24 +87,29 @@
 │ provider     │       │ created_at   │       │ description  │
 │ theme        │       │ updated_at   │       │ due_date     │
 │ created_at   │       └──────────────┘       │ priority     │
-│ updated_at   │                              │ status       │
-└──────────────┘                              │ position     │
-                                                │ created_at   │
-                                                │ updated_at   │
-                                                └──────────────┘
-                                                        │
-                                               ┌────────┴────────┐
-                                               │ notifications   │
-                                               ├─────────────────┤
-                                               │ id (PK)         │
-                                               │ user_id (FK)    │
-                                               │ type            │
-                                               │ title           │
-                                               │ message         │
-                                               │ data (JSONB)    │
-                                               │ read            │
-                                               │ created_at      │
-                                               └─────────────────┘
+│ updated_at   │              ▲               │ status       │
+└──────┬───────┘              │               │ position     │
+       │               ┌──────┴───────┐       │ created_at   │
+       │               │    labels    │       │ updated_at   │
+       │               ├──────────────┤       └──────┬───────┘
+       │               │ id (PK)      │              │
+       └──────────────►│ user_id (FK) │◄─────────────┘
+                       │ name         │
+                       │ color        │
+                       └──────────────┘
+                               │
+                      ┌────────┴────────┐
+                      │ notifications   │
+                      ├─────────────────┤
+                      │ id (PK)         │
+                      │ user_id (FK)    │
+                      │ type            │
+                      │ title           │
+                      │ message         │
+                      │ data (JSONB)    │
+                      │ read            │
+                      │ created_at      │
+                      └─────────────────┘
 ```
 
 ### Table Definitions
@@ -157,7 +162,26 @@ CREATE TABLE tasks (
 
 **Derived Field:** `is_subtask` = `parent_id IS NOT NULL`
 
-#### 3.4 notifications
+#### 3.4 labels
+```sql
+CREATE TABLE labels (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name        VARCHAR(50) NOT NULL,
+  color       VARCHAR(7)  DEFAULT '#64748b',
+  created_at  TIMESTAMP   DEFAULT NOW(),
+  updated_at  TIMESTAMP   DEFAULT NOW()
+);
+
+-- Junction table for many-to-many relationship
+CREATE TABLE task_labels (
+  task_id     UUID        REFERENCES tasks(id) ON DELETE CASCADE,
+  label_id    UUID        REFERENCES labels(id) ON DELETE CASCADE,
+  PRIMARY KEY (task_id, label_id)
+);
+```
+
+#### 3.5 notifications
 ```sql
 CREATE TABLE notifications (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -205,19 +229,31 @@ Production: https://api.todoapp.com/api
 | GET | `/projects/:id` | Get single project | Yes |
 | PUT | `/projects/:id` | Update project | Yes |
 | DELETE | `/projects/:id` | Delete project | Yes |
-| PUT | `/projects/:id/reorder` | Reorder projects | Yes |
+| PUT | `/projects/reorder` | Reorder projects | Yes |
 
 ### Task Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|--------------|
-| GET | `/projects/:projectId/tasks` | Get all tasks in project (includes subtasks) | Yes |
-| POST | `/projects/:projectId/tasks` | Create task | Yes |
-| GET | `/tasks/:id` | Get single task with subtasks | Yes |
+| GET | `/tasks` | Get all tasks (supports `filter=today`) | Yes |
+| GET | `/tasks/project/:projectId` | Get all tasks in project | Yes |
+| POST | `/tasks/project/:projectId` | Create task | Yes |
+| GET | `/tasks/:id` | Get single task | Yes |
 | PUT | `/tasks/:id` | Update task | Yes |
-| DELETE | `/tasks/:id` | Delete task (cascades to subtasks) | Yes |
-| PUT | `/tasks/:id/move` | Move task (change status/position) | Yes |
-| PUT | `/tasks/:id/subtasks` | Update subtasks order | Yes |
+| DELETE | `/tasks/:id` | Delete task | Yes |
+| PUT | `/tasks/:id/move` | Move task (status/position) | Yes |
+| POST | `/tasks/:id/subtasks` | Add subtask | Yes |
+| PUT | `/tasks/subtasks/:id` | Update subtask | Yes |
+| DELETE | `/tasks/subtasks/:id` | Delete subtask | Yes |
+
+### Label Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| GET | `/labels` | List all user's labels | Yes |
+| POST | `/labels` | Create label | Yes |
+| PUT | `/labels/:id` | Update label | Yes |
+| DELETE | `/labels/:id` | Delete label | Yes |
 
 ### Notification Endpoints
 
@@ -305,15 +341,18 @@ client/
 │   ├── pages/
 │   │   ├── Login.jsx
 │   │   ├── Register.jsx
-│   │   ├── Dashboard.jsx      # Main Kanban view
+│   │   ├── Dashboard.jsx      # Main tasks overview
 │   │   ├── ProjectView.jsx    # Single project Kanban
+│   │   ├── TodayView.jsx      # Tasks due today
+│   │   ├── CalendarView.jsx   # Monthly calendar view
 │   │   └── Settings.jsx
 │   ├── context/
-│   │   ├── AuthContext.jsx    # Authentication state
-│   │   ├── ThemeContext.jsx   # Dark/Light mode
-│   │   ├── ProjectContext.jsx # Projects state
-│   │   ├── TaskContext.jsx    # Tasks state
-│   │   └── SocketContext.jsx  # WebSocket state
+│   │   ├── AuthContext.jsx
+│   │   ├── ThemeContext.jsx
+│   │   ├── ProjectContext.jsx
+│   │   ├── TaskContext.jsx
+│   │   ├── LabelContext.jsx   # Labels state
+│   │   └── SocketContext.jsx
 │   ├── hooks/
 │   │   ├── useAuth.js
 │   │   ├── useTheme.js
@@ -356,6 +395,7 @@ server/
 │   │   ├── auth.js
 │   │   ├── projects.js
 │   │   ├── tasks.js
+│   │   ├── labels.js
 │   │   └── notifications.js
 │   ├── middleware/
 │   │   ├── auth.js            # JWT verification
@@ -554,16 +594,26 @@ server/
 ### 7.3 Dashboard (`/dashboard`)
 
 **Layout:**
-- All projects overview
-- Recent tasks
-- Quick actions
+- Overview of all pending tasks across projects.
+- Grouped by Status (Kanban) or List view.
 
-**Features:**
-- List of all projects with task counts
-- "Inbox" for tasks without project (optional)
-- Recent activity
+### 7.4 Today View (`/today`)
 
-### 7.4 Project View (`/projects/:id`)
+**Layout:**
+- Focus on tasks due today or overdue.
+- Simplified list view with quick-complete.
+
+### 7.5 Project View (`/projects/:id`)
+
+**Layout:**
+- Full Kanban board for a specific project.
+- Project-specific settings and members (if applicable).
+
+### 7.6 Calendar View (`/calendar`)
+
+**Layout:**
+- Monthly/Weekly view of tasks based on due date.
+- Mobile-optimized grid.
 
 **Layout:**
 - Full Kanban board
@@ -674,13 +724,11 @@ server/
 
 | Feature | Schema Changes | API Changes | Frontend Changes |
 |---------|---------------|-------------|------------------|
-| **Labels/Tags** | Add `labels`, `task_labels` tables | New routes | Filter UI, tag component |
-| **Task Dependencies** | Add `depends_on` column | Validate in task move | Dependency indicator |
+| **Labels/Tags** | ✅ Implemented | ✅ Implemented | ✅ Implemented |
 | **Recurring Tasks** | Add `recurrence_pattern` column | Cron job + new endpoint | Recurrence picker |
 | **Multiple Assignees** | Add `task_assignees` table | New routes | Assignee selector |
 | **File Attachments** | Add `attachments` table | File upload endpoint | Attachment list UI |
 | **Time Tracking** | Add `time_entries` table | Timer endpoints | Timer component |
-| **Comments** | Already in schema as `notifications` | Use notification type | Comments section |
 
 ### How to Add Features
 
@@ -739,7 +787,7 @@ cd client && npm run dev
 - [x] User can create a project
 - [x] User can edit project name/color
 - [x] User can delete project (with confirmation)
-- [ ] User can reorder projects
+- [x] User can reorder projects (Drag and Drop)
 
 ### Tasks
 - [x] User can create a task
@@ -750,7 +798,7 @@ cd client && npm run dev
 - [x] User can add subtasks
 - [x] User can toggle subtask completion
 - [x] User can drag task between columns
-- [ ] User can reorder tasks within column
+- [x] User can reorder tasks within column
 
 ### UI/UX
 - [x] Dark mode works
