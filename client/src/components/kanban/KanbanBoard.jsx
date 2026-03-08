@@ -187,10 +187,10 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }) {
                 onClick={() => setActiveTab(index)}
                 className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-3 text-xs font-semibold transition-all whitespace-nowrap ${
                   activeTab === index
-                    ? 'bg-white dark:bg-gray-800 shadow-md ring-2'
+                    ? 'bg-white dark:bg-gray-800 shadow-md ring-2 ring-inset'
                     : 'bg-gray-100 dark:bg-gray-800/50 dark:text-gray-400'
                 } text-gray-600`}
-                style={activeTab === index ? { ringColor: col.color } : {}}
+                style={activeTab === index ? { '--tw-ring-color': col.color } : {}}
               >
                 <span
                   className="h-3 w-3 rounded-full"

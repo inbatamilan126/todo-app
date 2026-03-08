@@ -67,7 +67,7 @@ export function KanbanColumn({
       className={cn(
         'flex flex-col rounded-xl bg-gray-100 dark:bg-gray-800/50',
         isMobile ? 'w-full' : isFullWidth ? 'flex-1 min-w-0' : 'w-72 flex-shrink-0',
-        isOver && 'ring-2 ring-primary-500'
+        isOver && 'ring-2 ring-inset ring-primary-500'
       )}
     >
       {/* Column Header */}
