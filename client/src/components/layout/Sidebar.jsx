@@ -8,7 +8,24 @@ import {
   LayoutDashboard,
   Sun,
   Calendar,
+  GripVertical,
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useAuth } from '../../context/AuthContext';
 import { useProjects } from '../../context/ProjectContext';
 import { cn } from '../../utils/cn';
@@ -20,10 +37,100 @@ const PROJECT_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'
 ];
 
+function SortableProjectItem({ project, isActive, onClose, onContextMenu }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: project.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative group",
+        isDragging && "z-50 shadow-lg rounded-lg bg-white dark:bg-gray-800"
+      )}
+    >
+      <div
+        className={cn(
+          'group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          isActive
+            ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+            : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+        )}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-1 -ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <NavLink
+            to={`/projects/${project.id}`}
+            onClick={onClose}
+            className="flex items-center gap-3 flex-1 min-w-0"
+          >
+            <span
+              className="h-3 w-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: project.color }}
+            />
+            <span className="truncate">{project.name}</span>
+          </NavLink>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-400">
+            {project.taskCount || 0}
+          </span>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              onContextMenu({
+                id: project.id,
+                name: project.name,
+                color: project.color,
+                x: e.clientX,
+                y: e.clientY,
+              });
+            }}
+            className="rounded p-1 opacity-0 transition-opacity hover:bg-gray-200 group-hover:opacity-100 dark:hover:bg-gray-700"
+          >
+            <MoreVertical className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
-  const { projects, createProject, updateProject, deleteProject } = useProjects();
+  const { projects, createProject, updateProject, deleteProject, reorderProjects } = useProjects();
   const navigate = useNavigate();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -57,6 +164,20 @@ export function Sidebar({ isOpen, onClose }) {
       navigate('/dashboard');
     }
     setContextMenu(null);
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (active && over && active.id !== over.id) {
+      const oldIndex = projects.findIndex((p) => p.id === active.id);
+      const newIndex = projects.findIndex((p) => p.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reordered = arrayMove(projects, oldIndex, newIndex);
+        await reorderProjects(reordered);
+      }
+    }
   };
 
   return (
@@ -150,50 +271,26 @@ export function Sidebar({ isOpen, onClose }) {
             </div>
 
             <div className="space-y-1">
-              {projects.map((project) => (
-                <div key={project.id} className="relative">
-                  <NavLink
-                    to={`/projects/${project.id}`}
-                    onClick={onClose}
-                    className={({ isActive }) =>
-                      cn(
-                        'group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
-                          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-                      )
-                    }
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span className="truncate">{project.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-400">
-                        {project.taskCount || 0}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setContextMenu({
-                            id: project.id,
-                            name: project.name,
-                            color: project.color,
-                            x: e.clientX,
-                            y: e.clientY,
-                          });
-                        }}
-                        className="rounded p-1 opacity-0 transition-opacity hover:bg-gray-200 group-hover:opacity-100 dark:hover:bg-gray-700"
-                      >
-                        <MoreVertical className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </NavLink>
-                </div>
-              ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={projects.map((p) => p.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {projects.map((project) => (
+                    <SortableProjectItem
+                      key={project.id}
+                      project={project}
+                      onClose={onClose}
+                      onContextMenu={setContextMenu}
+                      isActive={window.location.pathname === `/projects/${project.id}`}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
         </nav>
