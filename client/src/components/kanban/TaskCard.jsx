@@ -5,14 +5,14 @@ import { cn } from '../../utils/cn';
 import { PriorityBadge } from '../common/Badge';
 import { formatDate, isDueOverdue } from '../../utils/helpers';
 
-export function TaskCard({ task, isDragging, onClick, isMobile }) {
+export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering = true }) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging: isSortableDragging,
+    isDragging: isNodeDragging,
   } = isMobile ? {} : useSortable({ id: task.id });
 
   const style = {
@@ -34,7 +34,8 @@ export function TaskCard({ task, isDragging, onClick, isMobile }) {
       onClick={onClick}
       className={cn(
         'group relative touch-manipulation rounded-lg bg-white p-4 shadow-sm transition-all hover:shadow-md dark:bg-gray-800',
-        isDragging || isSortableDragging ? 'opacity-50' : ''
+        (isDragging || isNodeDragging) ? 'opacity-50' : '',
+        'cursor-pointer'
       )}
     >
       {/* Drag Handle - Desktop only */}

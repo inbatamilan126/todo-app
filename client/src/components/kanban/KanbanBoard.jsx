@@ -14,7 +14,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useTasks } from '../../context/TaskContext';
 import { KanbanColumn } from './KanbanColumn';
@@ -43,8 +43,8 @@ function useIsMobile() {
   return isMobile;
 }
 
-export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick, onAddTask }) {
-  const { tasks: contextTasks, moveTask: contextMoveTask, getTasksByStatus: contextGetTasksByStatus, handleSocketEvent, fetchTasks } = useTasks();
+export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick, onAddTask, allowReordering = true }) {
+  const { tasks: contextTasks, moveTask: contextMoveTask, getTasksByStatus: contextGetTasksByStatus, handleSocketEvent, fetchTasks, reorderTasks } = useTasks();
   
   const tasks = importedTasks || contextTasks;
   const moveTask = onMoveTask || contextMoveTask;
@@ -83,12 +83,14 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
     socketService.on('task:updated', (data) => handleSocketEvent('task:updated', data));
     socketService.on('task:deleted', (data) => handleSocketEvent('task:deleted', data));
     socketService.on('task:moved', (data) => handleSocketEvent('task:updated', data));
+    socketService.on('tasks:reordered', (data) => handleSocketEvent('tasks:reordered', data));
 
     return () => {
       socketService.off('task:created');
       socketService.off('task:updated');
       socketService.off('task:deleted');
       socketService.off('task:moved');
+      socketService.off('tasks:reordered');
     };
   }, [handleSocketEvent]);
 
@@ -147,31 +149,35 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
     const activeId = active.id;
     const overId = over.id;
 
+    // Check if dropping over a column
     const targetColumn = columns.find((c) => c.id === overId);
     if (targetColumn) {
-      const columnTasks = tasksByStatus[targetColumn.id] || [];
-      const newPosition = columnTasks.length;
-      await moveTask(activeId, targetColumn.id, newPosition);
+      const sourceTask = tasks.find((t) => t.id === activeId);
+      // Only move if the status is different
+      if (sourceTask && sourceTask.status !== targetColumn.id) {
+        const columnTasks = tasksByStatus[targetColumn.id] || [];
+        const newPosition = columnTasks.length;
+        await moveTask(activeId, targetColumn.id, newPosition);
+      }
       return;
     }
 
+    // Dropping over another task
     const overTask = tasks.find((t) => t.id === overId);
     if (overTask) {
       const sourceTask = tasks.find((t) => t.id === activeId);
       if (sourceTask && sourceTask.status !== overTask.status) {
+        // Move to the new status
         await moveTask(activeId, overTask.status, overTask.position);
-      } else if (sourceTask && sourceTask.status === overTask.status) {
-        const columnTasks = tasksByStatus[sourceTask.status];
+      } else if (sourceTask && sourceTask.status === overTask.status && allowReordering) {
+        // Reorder within the same status (only if allowed)
+        const columnTasks = [...tasksByStatus[sourceTask.status]];
         const oldIndex = columnTasks.findIndex((t) => t.id === activeId);
         const newIndex = columnTasks.findIndex((t) => t.id === overId);
         
         if (oldIndex !== newIndex) {
           const reordered = arrayMove(columnTasks, oldIndex, newIndex);
-          for (let i = 0; i < reordered.length; i++) {
-            if (reordered[i].position !== i) {
-              await moveTask(reordered[i].id, reordered[i].status, i);
-            }
-          }
+          await reorderTasks(reordered);
         }
       }
     }
@@ -184,9 +190,49 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
   const activeColumn = columns[activeTab];
   const activeTasks = tasksByStatus[activeColumn.id] || [];
 
+  const boardContent = (
+    <div className="hidden lg:flex lg:h-full lg:gap-4">
+      {columns.map((column) => {
+        const columnTasks = tasksByStatus[column.id] || [];
+        const content = (
+          <KanbanColumn
+            id={column.id}
+            title={column.title}
+            color={column.color}
+            tasks={columnTasks}
+            projectId={projectId}
+            onTaskClick={onTaskClick}
+            onAddTask={onAddTask}
+            showAddButton={column.id === TASK_STATUSES.TODO}
+            isFullWidth
+            allowReordering={allowReordering}
+          />
+        );
+
+        if (!allowReordering) return <div key={column.id} className="flex-1 h-full">{content}</div>;
+
+        return (
+          <SortableContext
+            key={column.id}
+            items={columnTasks.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {content}
+          </SortableContext>
+        );
+      })}
+    </div>
+  );
+
   if (isMobile) {
     return (
-      <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
         {/* Mobile: Tab Navigation */}
         <div className="lg:hidden mb-4 pt-2">
           <div className="flex gap-2">
@@ -219,7 +265,7 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
             ))}
           </div>
 
-          {/* Mobile: Single Column View - No DndContext */}
+          {/* Mobile: Single Column View */}
           <div className="mt-4">
             <KanbanColumn
               id={activeColumn.id}
@@ -239,10 +285,20 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
               prevStatus={activeColumn.prevStatus}
               nextStatus={activeColumn.nextStatus}
               isMobile={true}
+              allowReordering={allowReordering}
             />
           </div>
         </div>
-      </>
+
+        {/* Mobile Drag Overlay */}
+        <DragOverlay dropAnimation={null}>
+          {activeTask && (
+            <div className="w-full max-w-[calc(100vw-32px)]">
+              <TaskCard task={activeTask} isDragging isMobile allowReordering={allowReordering} />
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
     );
   }
 
@@ -259,34 +315,13 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
         },
       }}
     >
-      {/* Desktop: Full Width Columns */}
-      <div className="hidden lg:flex lg:h-full lg:gap-4">
-        {columns.map((column) => (
-          <SortableContext
-            key={column.id}
-            items={(tasksByStatus[column.id] || []).map((t) => t.id)}
-            strategy={horizontalListSortingStrategy}
-          >
-            <KanbanColumn
-              id={column.id}
-              title={column.title}
-              color={column.color}
-              tasks={tasksByStatus[column.id] || []}
-              projectId={projectId}
-              onTaskClick={onTaskClick}
-              onAddTask={onAddTask}
-              showAddButton={column.id === TASK_STATUSES.TODO}
-              isFullWidth
-            />
-          </SortableContext>
-        ))}
-      </div>
+      {boardContent}
 
       {/* Drag Overlay for Desktop */}
       <DragOverlay dropAnimation={null}>
         {activeTask && (
           <div className="w-full max-w-sm">
-            <TaskCard task={activeTask} isDragging />
+            <TaskCard task={activeTask} isDragging allowReordering={allowReordering} />
           </div>
         )}
       </DragOverlay>

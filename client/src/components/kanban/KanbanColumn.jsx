@@ -25,6 +25,7 @@ export function KanbanColumn({
   onSwipeEnd,
   prevStatus,
   nextStatus,
+  allowReordering = true,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const touchStartX = useRef(null);
@@ -154,10 +155,10 @@ export function KanbanColumn({
                   swipingTask?.id === task.id && "opacity-50"
                 )}
               >
-                <TaskCard task={task} isMobile={isMobile} />
+                <TaskCard task={task} isMobile={isMobile} allowReordering={allowReordering} />
               </div>
             ) : (
-              <TaskCard task={task} onClick={() => onTaskClick?.(task)} isMobile={isMobile} />
+              <TaskCard task={task} onClick={() => onTaskClick?.(task)} isMobile={isMobile} allowReordering={allowReordering} />
             )}
           </div>
         ))}
