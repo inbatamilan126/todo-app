@@ -60,6 +60,7 @@ export function TodayView() {
             onTaskClick={handleTaskClick} 
             onAddTask={handleAddTask} 
             allowReordering={false}
+            showProject={true}
           />
         )}
       </div>

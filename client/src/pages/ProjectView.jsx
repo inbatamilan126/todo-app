@@ -75,6 +75,7 @@ export function ProjectView() {
           projectId={id}
           onTaskClick={handleTaskClick}
           onAddTask={handleAddTask}
+          showProject={false}
         />
       </div>
 

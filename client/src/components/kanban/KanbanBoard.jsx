@@ -43,7 +43,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick, onAddTask, allowReordering = true }) {
+export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick, onAddTask, allowReordering = true, showProject = true }) {
   const { tasks: contextTasks, moveTask: contextMoveTask, getTasksByStatus: contextGetTasksByStatus, handleSocketEvent, fetchTasks, reorderTasks } = useTasks();
   
   const tasks = importedTasks || contextTasks;
@@ -206,6 +206,7 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
             showAddButton={column.id === TASK_STATUSES.TODO}
             isFullWidth
             allowReordering={allowReordering}
+            showProject={showProject}
           />
         );
 
@@ -286,6 +287,7 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
               nextStatus={activeColumn.nextStatus}
               isMobile={true}
               allowReordering={allowReordering}
+              showProject={showProject}
             />
           </div>
         </div>
@@ -294,7 +296,7 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
         <DragOverlay dropAnimation={null}>
           {activeTask && (
             <div className="w-full max-w-[calc(100vw-32px)]">
-              <TaskCard task={activeTask} isDragging isMobile allowReordering={allowReordering} />
+              <TaskCard task={activeTask} isDragging isMobile allowReordering={allowReordering} showProject={showProject} />
             </div>
           )}
         </DragOverlay>
@@ -321,7 +323,7 @@ export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick,
       <DragOverlay dropAnimation={null}>
         {activeTask && (
           <div className="w-full max-w-sm">
-            <TaskCard task={activeTask} isDragging allowReordering={allowReordering} />
+            <TaskCard task={activeTask} isDragging allowReordering={allowReordering} showProject={showProject} />
           </div>
         )}
       </DragOverlay>
