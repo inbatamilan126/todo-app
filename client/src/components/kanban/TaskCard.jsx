@@ -17,7 +17,7 @@ export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering 
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transform ? transition : undefined,
   };
 
   const overdue = isDueOverdue(task.dueDate);
@@ -25,16 +25,32 @@ export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering 
   const completedSubtasks = subtasks.filter(s => s.status === 'done').length;
   const hasSubtasks = subtasks.length > 0;
 
+  if (isNodeDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          'rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border-2 border-dashed border-gray-200 dark:border-gray-700',
+          'min-h-[120px] w-full p-4' // Matching card padding to maintain shell look
+        )}
+      />
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        ...(isDragging ? { transform: `${style.transform} scale(0.95) rotate(1deg)` } : {})
+      }}
       {...attributes}
       {...listeners}
       onClick={onClick}
       className={cn(
-        'group relative touch-manipulation rounded-lg bg-white p-4 shadow-sm transition-all hover:shadow-md dark:bg-gray-800',
-        (isDragging || isNodeDragging) ? 'opacity-50' : '',
+        'group relative touch-manipulation rounded-lg bg-white p-4 shadow-sm transition-all dark:bg-gray-800',
+        isDragging ? 'shadow-2xl ring-1 ring-primary-500/30 z-50 cursor-grabbing !opacity-100' : 'hover:shadow-md cursor-pointer',
         'cursor-pointer'
       )}
     >
