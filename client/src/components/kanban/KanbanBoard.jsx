@@ -43,8 +43,11 @@ function useIsMobile() {
   return isMobile;
 }
 
-export function KanbanBoard({ projectId, onTaskClick, onAddTask }) {
-  const { tasks, moveTask, getTasksByStatus, handleSocketEvent, fetchTasks } = useTasks();
+export function KanbanBoard({ projectId, importedTasks, onMoveTask, onTaskClick, onAddTask }) {
+  const { tasks: contextTasks, moveTask: contextMoveTask, getTasksByStatus: contextGetTasksByStatus, handleSocketEvent, fetchTasks } = useTasks();
+  
+  const tasks = importedTasks || contextTasks;
+  const moveTask = onMoveTask || contextMoveTask;
   const [activeTask, setActiveTask] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [swipingTask, setSwipingTask] = useState(null);
@@ -70,10 +73,10 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }) {
   );
 
   useEffect(() => {
-    if (projectId) {
+    if (projectId && !importedTasks) {
       fetchTasks(projectId);
     }
-  }, [projectId, fetchTasks]);
+  }, [projectId, fetchTasks, importedTasks]);
 
   useEffect(() => {
     socketService.on('task:created', (data) => handleSocketEvent('task:created', data));
@@ -89,7 +92,13 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }) {
     };
   }, [handleSocketEvent]);
 
-  const tasksByStatus = getTasksByStatus();
+  const tasksByStatus = importedTasks 
+    ? {
+        [TASK_STATUSES.TODO]: tasks.filter((t) => t.status === TASK_STATUSES.TODO),
+        [TASK_STATUSES.IN_PROGRESS]: tasks.filter((t) => t.status === TASK_STATUSES.IN_PROGRESS),
+        [TASK_STATUSES.DONE]: tasks.filter((t) => t.status === TASK_STATUSES.DONE),
+      }
+    : contextGetTasksByStatus();
 
   const handleSwipeStart = (task) => {
     setSwipingTask(task);

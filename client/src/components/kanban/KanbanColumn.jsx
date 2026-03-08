@@ -171,7 +171,7 @@ export function KanbanColumn({
         {/* Add Task Button */}
         {showAddButton && (
           <button
-            onClick={onAddTask}
+            onClick={() => onAddTask?.(id)}
             className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 p-4 text-base font-medium text-gray-500 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700/50"
           >
             <Plus className="h-5 w-5" />

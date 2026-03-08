@@ -42,10 +42,38 @@ export function TaskCard({ task, isDragging, onClick, isMobile }) {
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
 
+      {/* Project Indicator (For Global Views) */}
+      {task.project && (
+        <div className="mb-2 flex items-center gap-1.5">
+          <span 
+            className="h-2 w-2 rounded-full" 
+            style={{ backgroundColor: task.project.color }}
+          />
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {task.project.name}
+          </span>
+        </div>
+      )}
+
       {/* Priority */}
       <div className="mb-2">
         <PriorityBadge priority={task.priority} />
       </div>
+
+      {/* Labels */}
+      {task.labels && task.labels.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {task.labels.map((label) => (
+            <span
+              key={label.id}
+              className="px-2 py-0.5 text-[10px] font-semibold rounded-md text-white shadow-sm"
+              style={{ backgroundColor: label.color }}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Title */}
       <h4 className="mb-2 pr-6 text-base font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
