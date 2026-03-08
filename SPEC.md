@@ -729,38 +729,38 @@ cd client && npm run dev
 ## 12. Acceptance Criteria
 
 ### Authentication
-- [ ] User can register with email/password
-- [ ] User can login with email/password
-- [ ] User can login with Google OAuth
-- [ ] User can logout
-- [ ] Protected routes redirect to login
+- [x] User can register with email/password
+- [x] User can login with email/password
+- [x] User can login with Google OAuth
+- [x] User can logout
+- [x] Protected routes redirect to login
 
 ### Projects
-- [ ] User can create a project
-- [ ] User can edit project name/color
-- [ ] User can delete project (with confirmation)
+- [x] User can create a project
+- [x] User can edit project name/color
+- [x] User can delete project (with confirmation)
 - [ ] User can reorder projects
 
 ### Tasks
-- [ ] User can create a task
-- [ ] User can edit task details
-- [ ] User can delete task
-- [ ] User can set due date
-- [ ] User can set priority
-- [ ] User can add subtasks
-- [ ] User can toggle subtask completion
-- [ ] User can drag task between columns
+- [x] User can create a task
+- [x] User can edit task details
+- [x] User can delete task
+- [x] User can set due date
+- [x] User can set priority
+- [x] User can add subtasks
+- [x] User can toggle subtask completion
+- [x] User can drag task between columns
 - [ ] User can reorder tasks within column
 
 ### UI/UX
-- [ ] Dark mode works
-- [ ] Theme persists across sessions
-- [ ] Mobile responsive layout works
-- [ ] PWA can be installed
+- [x] Dark mode works
+- [x] Theme persists across sessions
+- [x] Mobile responsive layout works
+- [x] PWA can be installed
 
 ### Real-time
-- [ ] Changes sync across tabs
-- [ ] WebSocket reconnects on disconnect
+- [x] Changes sync across tabs
+- [x] WebSocket reconnects on disconnect
 
 ---
 
@@ -801,19 +801,19 @@ VITE_WS_URL=http://localhost:5000
 | Component | Status | Notes |
 |-----------|--------|-------|
 | SPEC.md | ✅ Complete | This document |
-| Backend Setup | ⏳ Pending | |
-| Database Schema | ⏳ Pending | |
-| Auth API | ⏳ Pending | |
-| Project API | ⏳ Pending | |
-| Task API | ⏳ Pending | |
-| WebSocket | ⏳ Pending | |
-| Frontend Setup | ⏳ Pending | |
-| Auth Pages | ⏳ Pending | |
-| Kanban Board | ⏳ Pending | |
-| Task Modal | ⏳ Pending | |
-| Dark Mode | ⏳ Pending | |
-| Mobile UI | ⏳ Pending | |
-| PWA | ⏳ Pending | |
+| Backend Setup | ✅ Complete | Express, Prisma, Postgres configured |
+| Database Schema | ✅ Complete | Prisma schema and migrations applied |
+| Auth API | ✅ Complete | JWT and Google OAuth functional |
+| Project API | ✅ Complete | CRUD endpoints working |
+| Task API | ✅ Complete | CRUD and drag/drop updates working |
+| WebSocket | ✅ Complete | Socket.io real-time sync implemented |
+| Frontend Setup | ✅ Complete | Vite, React, Tailwind configured |
+| Auth Pages | ✅ Complete | Login and register pages fully functional |
+| Kanban Board | ✅ Complete | Drag and drop working with responsive views |
+| Task Modal | ✅ Complete | Form handling with subtasks working |
+| Dark Mode | ✅ Complete | Tailwind dark mode and context set up |
+| Mobile UI | ✅ Complete | Off-canvas drawer and bottom nav implemented |
+| PWA | ✅ Complete | vite-plugin-pwa configured |
 
 ---
 
