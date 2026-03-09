@@ -50,9 +50,9 @@ export function ProjectView() {
   };
 
   return (
-    <div className="flex h-full flex-col -mx-4 px-4 lg:mx-0 lg:px-0">
+    <div className="flex h-full flex-col">
       {/* Project Header */}
-      <div className="mb-4 flex items-center justify-between bg-gray-50 dark:bg-gray-950 lg:bg-transparent py-2">
+      <div className="mb-4 flex items-center justify-between bg-gray-50 dark:bg-gray-950 lg:bg-transparent py-2 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <div
             className="h-4 w-4 rounded-full"
@@ -63,14 +63,14 @@ export function ProjectView() {
           </h1>
         </div>
 
-        <Button onClick={() => handleAddTask(TASK_STATUSES.TODO)} size="sm">
+        <Button onClick={() => handleAddTask(TASK_STATUSES.TODO)} size="sm" className="shrink-0">
           <Plus className="mr-1 h-4 w-4" />
           Add Task
         </Button>
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden px-4 pb-4 sm:px-6 lg:px-8">
         <KanbanBoard
           projectId={id}
           onTaskClick={handleTaskClick}
