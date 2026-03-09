@@ -15,14 +15,17 @@ model User {
   avatarUrl   String?  @map("avatar_url")
   provider    String   @default("email")
   providerId  String?  @map("provider_id")
-  theme       String   @default("system")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  theme                  String             @default("system")
+  defaultReminderMinutes Int                @default(30) @map("default_reminder_minutes")
+  pushEnabled            Boolean            @default(false) @map("push_enabled")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
 
-  projects      Project[]
-  tasks         Task[]
-  notifications Notification[]
-  labels        Label[]
+  projects          Project[]
+  tasks             Task[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  labels            Label[]
 
   @@map("users")
 }
@@ -49,13 +52,16 @@ model Task {
   parentId    String?   @map("parent_id")
   userId      String    @map("user_id")
   title       String
-  description String?   @db.Text
-  dueDate     DateTime? @map("due_date")
-  priority    String    @default("medium")
-  status      String    @default("todo")
-  position    Int       @default(0)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  description     String?   @db.Text
+  dueDate         DateTime? @map("due_date")
+  dueTime         String?   @map("due_time")
+  priority        String    @default("medium")
+  status          String    @default("todo")
+  position        Int       @default(0)
+  reminderEnabled Boolean   @default(true) @map("reminder_enabled")
+  remindedAt      DateTime? @map("reminded_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   parent     Task?        @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
@@ -72,17 +78,33 @@ model Task {
 model Notification {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  type      String
-  title     String
-  message   String?  @db.Text
-  data      Json?
-  read      Boolean  @default(false)
+  type       String
+  title      String
+  message    String?  @db.Text
+  data       Json?
+  read       Boolean  @default(false)
+  readAt     DateTime? @map("read_at")
+  isArchived Boolean  @default(false) @map("is_archived")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, isArchived])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, read])
-  @@map("notifications")
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 model Label {
