@@ -145,7 +145,7 @@ export function TaskCard({ task, isDragging, onClick, isMobile, allowReordering 
           <div
             className={cn(
               'flex items-center gap-1.5',
-              overdue && 'text-red-500'
+              overdue && task.status !== 'done' && 'text-red-500'
             )}
           >
             <Calendar className="h-4 w-4" />
