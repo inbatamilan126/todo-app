@@ -25,23 +25,15 @@ export default defineConfig({
           }
         ]
       },
-      workbox: {
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'service-worker.js',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Never serve app-shell HTML for backend/API routes.
-        navigateFallbackDenylist: [/^\/api\/.*/, /^\/socket\.io\/.*/],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\./,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24
-              }
-            }
-          }
-        ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       }
     })
   ],

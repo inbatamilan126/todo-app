@@ -8,6 +8,7 @@ import { ProjectView } from './pages/ProjectView';
 import { Settings } from './pages/Settings';
 import { TodayView } from './pages/TodayView';
 import { CalendarView } from './pages/CalendarView';
+import { Notifications } from './pages/Notifications';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -81,6 +82,7 @@ export default function App() {
         <Route path="/projects/new" element={<Dashboard />} />
         <Route path="/projects/:id" element={<ProjectView />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Route>
 
       {/* Default redirect */}

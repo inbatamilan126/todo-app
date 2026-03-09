@@ -1,13 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Search, Sun, Moon, Monitor, Bell } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
+import api from '../../services/api';
 
 export function Header({ onMenuClick, title }) {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await api.get('/notifications/count');
+        setUnreadCount(res.data.count || 0);
+      } catch (error) {
+        console.error('Failed to fetch unread count', error);
+      }
+    };
+    
+    fetchUnreadCount();
+    
+    // Setup an interval to check occasionally, or just rely on page navs
+    const interval = setInterval(fetchUnreadCount, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [navigate]);
 
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor;
 
@@ -57,7 +76,9 @@ export function Header({ onMenuClick, title }) {
           className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
         >
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+          {unreadCount > 0 && (
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+          )}
         </button>
       </div>
     </header>

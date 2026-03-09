@@ -171,6 +171,12 @@ export function AuthProvider({ children }) {
     updateUser(response.data.user);
   };
 
+  const updatePreferences = async (preferences) => {
+    const response = await api.put('/auth/preferences', preferences);
+    updateUser(response.data.user);
+    return response.data.user;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -182,6 +188,7 @@ export function AuthProvider({ children }) {
         logout,
         updateUser,
         updateTheme,
+        updatePreferences,
         isAuthenticated: !!user,
       }}
     >

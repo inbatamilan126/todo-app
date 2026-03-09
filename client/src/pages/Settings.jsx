@@ -4,9 +4,10 @@ import { useTheme } from '../context/ThemeContext';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { cn } from '../utils/cn';
+import { pushService } from '../services/pushService';
 
 export function Settings() {
-  const { user, updateUser, updateTheme } = useAuth();
+  const { user, updateUser, updateTheme, updatePreferences } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const [name, setName] = useState(user?.name || '');
@@ -30,6 +31,83 @@ export function Settings() {
       setMessage('Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [permissionResult, setPermissionResult] = useState(null);
+
+  const handlePushToggle = async () => {
+    setNotificationsLoading(true);
+    try {
+      const isCurrentlyEnabled = user.pushEnabled;
+      
+      if (!isCurrentlyEnabled) {
+        // User wants to enable notifications
+        const permission = await Notification.requestPermission();
+        console.log('Notification permission result:', permission);
+        
+        if (permission === 'granted') {
+          // Wait for service worker with a timeout
+          const swReady = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Service worker not available. Please reload the page and try again.')), 5000)
+            )
+          ]);
+          console.log('Service worker registration ready:', swReady);
+          
+          // Get VAPID key and subscribe
+          const vapidKey = await pushService.getVapidKey();
+          const convertedVapidKey = pushService.urlBase64ToUint8Array(vapidKey);
+          
+          const subscription = await swReady.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+          });
+
+          // Send to backend
+          await pushService.subscribe(subscription);
+          
+          // Update user preference in DB
+          await updatePreferences({ pushEnabled: true });
+          console.log('Push enabled successfully');
+        } else {
+          alert('Notification permission was denied by the browser. Please enable it in your browser settings.');
+        }
+      } else {
+        // User wants to disable notifications
+        try {
+          const swReady = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('SW timeout')), 3000)
+            )
+          ]);
+          const subscription = await swReady.pushManager.getSubscription();
+          if (subscription) {
+            await pushService.unsubscribe(subscription.endpoint);
+            await subscription.unsubscribe();
+          }
+        } catch (swError) {
+          console.warn('Could not clean up push subscription:', swError);
+        }
+        await updatePreferences({ pushEnabled: false });
+        console.log('Push disabled successfully');
+      }
+    } catch (error) {
+      console.error('Failed to toggle notifications:', error);
+      alert(error.message || 'Failed to configure notifications.');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const handleReminderChange = async (minutes) => {
+    try {
+      await updatePreferences({ defaultReminderMinutes: Number(minutes) });
+    } catch (error) {
+      console.error('Failed to update reminder settings', error);
     }
   };
 
@@ -123,6 +201,60 @@ export function Settings() {
               )}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Notifications Section */}
+      <section className="mb-8 rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Notifications & Reminders
+        </h2>
+
+        <div className="space-y-6">
+          {/* Push Web Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">Push Notifications</h3>
+              <p className="text-sm text-gray-500">Receive reminders even when the app is closed.</p>
+            </div>
+            <button
+              onClick={handlePushToggle}
+              disabled={notificationsLoading}
+              className={cn(
+                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50',
+                user?.pushEnabled ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  user?.pushEnabled ? 'translate-x-5' : 'translate-x-0'
+                )}
+              />
+            </button>
+          </div>
+
+          {/* Default Reminder Time */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Default Task Reminder
+            </label>
+            <select
+              value={user?.defaultReminderMinutes || 30}
+              onChange={(e) => handleReminderChange(e.target.value)}
+              className="block w-full rounded-lg border-gray-300 bg-gray-50 py-2 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            >
+              <option value={0}>At time of event (0 min)</option>
+              <option value={5}>5 minutes before</option>
+              <option value={15}>15 minutes before</option>
+              <option value={30}>30 minutes before</option>
+              <option value={60}>1 hour before</option>
+              <option value={1440}>1 day before</option>
+            </select>
+            <p className="mt-2 text-sm text-gray-500">
+              When you add a time to a task, we will automatically set a reminder for this far in advance.
+            </p>
+          </div>
         </div>
       </section>
 

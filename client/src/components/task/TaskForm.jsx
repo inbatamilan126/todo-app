@@ -69,7 +69,7 @@ export function TaskForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 items-start">
         {!isEdit && projects && projects.length > 0 && (
           <Select
             label="Project"
@@ -80,11 +80,44 @@ export function TaskForm({
           />
         )}
 
-        <DatePicker
-          label="Due Date"
-          value={formData.dueDate}
-          onChange={(date) => onChange({ ...formData, dueDate: date })}
-        />
+        <div className="flex flex-col space-y-3">
+          <DatePicker
+            label="Due Date"
+            value={formData.dueDate}
+            onChange={(date) => onChange({ ...formData, dueDate: date })}
+          />
+          
+          {formData.dueDate && (
+            <div className="flex flex-col space-y-2 pl-1 border-l-2 border-primary-200 dark:border-primary-800 ml-1">
+              <Input
+                type="time"
+                label="Time (Optional)"
+                value={formData.dueTime || ''}
+                onChange={(e) => onChange({ ...formData, dueTime: e.target.value })}
+                className="text-sm"
+              />
+              
+              <div className="flex items-center justify-between pt-1 pr-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <span className="text-amber-500">🔔</span> Remind me
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...formData, reminderEnabled: !formData.reminderEnabled })}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formData.reminderEnabled !== false ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      formData.reminderEnabled !== false ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <Select
           label="Priority"
@@ -170,7 +203,7 @@ export function TaskForm({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onChange({ ...formData, title: '', description: '', dueDate: null, priority: 'medium', status: 'todo', labelIds: [] });
+              onChange({ ...formData, title: '', description: '', dueDate: null, dueTime: '', reminderEnabled: true, priority: 'medium', status: 'todo', labelIds: [] });
             }}
           >
             Clear
