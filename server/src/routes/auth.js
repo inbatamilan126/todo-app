@@ -164,6 +164,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
         provider: true,
         theme: true,
         defaultReminderMinutes: true,
+        defaultReminderTime: true,
         pushEnabled: true,
         createdAt: true,
       },
@@ -203,6 +204,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
         provider: user.provider,
         theme: user.theme,
         defaultReminderMinutes: user.defaultReminderMinutes,
+        defaultReminderTime: user.defaultReminderTime,
         pushEnabled: user.pushEnabled,
         createdAt: user.createdAt,
       },
@@ -238,6 +240,7 @@ router.put('/profile', authenticate, validate(updateProfileSchema), async (req, 
         provider: true,
         theme: true,
         defaultReminderMinutes: true,
+        defaultReminderTime: true,
         pushEnabled: true,
         createdAt: true,
       },
@@ -265,6 +268,7 @@ router.put('/theme', authenticate, validate(updateThemeSchema), async (req, res,
         provider: true,
         theme: true,
         defaultReminderMinutes: true,
+        defaultReminderTime: true,
         pushEnabled: true,
         createdAt: true,
       },
@@ -284,7 +288,8 @@ router.put('/preferences', authenticate, async (req, res, next) => {
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: { 
-        ...(defaultReminderMinutes !== undefined && { defaultReminderMinutes }),
+        ...(defaultReminderMinutes !== undefined && { defaultReminderMinutes: Number(defaultReminderMinutes) }),
+        ...(defaultReminderTime !== undefined && { defaultReminderTime }),
         ...(pushEnabled !== undefined && { pushEnabled })
       },
       select: {
@@ -295,6 +300,7 @@ router.put('/preferences', authenticate, async (req, res, next) => {
         provider: true,
         theme: true,
         defaultReminderMinutes: true,
+        defaultReminderTime: true,
         pushEnabled: true,
         createdAt: true,
       },
@@ -362,6 +368,8 @@ router.get('/oauth/google/callback', (req, res, next) => {
           avatarUrl: true,
           provider: true,
           theme: true,
+          defaultReminderMinutes: true,
+          defaultReminderTime: true,
           createdAt: true,
         }
       });

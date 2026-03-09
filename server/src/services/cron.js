@@ -19,45 +19,25 @@ export const startCronJobs = () => {
       const now = new Date();
       
       // Find tasks that need reminding
-      // Condition: reminderEnabled = true, remindedAt = null
+      // Condition: reminderEnabled = true, remindedAt = null, reminderAt <= now
       const tasksToRemind = await prisma.task.findMany({
         where: {
-          dueDate: { not: null },
+          reminderAt: { lte: now },
           reminderEnabled: true,
           remindedAt: null,
           status: { notIn: ['done'] },
         },
         include: {
           user: {
-            select: { id: true, defaultReminderMinutes: true, pushEnabled: true }
+            select: { id: true, pushEnabled: true }
           }
         }
       });
 
       for (const task of tasksToRemind) {
-        // Construct the exact due Date object based on dueDate and dueTime
-        const taskDueDateTime = new Date(task.dueDate);
-        
-        if (task.dueTime) {
-          const [hours, minutes] = task.dueTime.split(':').map(Number);
-          taskDueDateTime.setHours(hours, minutes, 0, 0);
-        } else {
-          // If no specific time, default to end of the day or a sensible default
-          // For now, we'll just use the date itself (which is usually midnight UTC)
-          // Let's assume midnight for simplicity if no time is provided
-        }
-
-        // Calculate minutes until due
-        const diffMs = taskDueDateTime.getTime() - now.getTime();
-        const minutesUntilDue = Math.floor(diffMs / (1000 * 60));
-
-        // Let's trigger if it's within the user's default reminder window (or exactly at it)
-        // Also catch it if it's overdue and hasn't been reminded yet
-        if (minutesUntilDue <= task.user.defaultReminderMinutes) {
-          
-          const timeText = task.dueTime ? `at ${task.dueTime}` : 'today';
-          const notificationTitle = `Task Reminder: ${task.title}`;
-          const notificationMessage = `This task is due ${timeText}.`;
+        const timeText = task.dueTime ? `at ${task.dueTime}` : 'today';
+        const notificationTitle = `Task Reminder: ${task.title}`;
+        const notificationMessage = `This task is due ${timeText}.`;
 
           // 1. Create In-App Notification
           await prisma.notification.create({
@@ -109,7 +89,6 @@ export const startCronJobs = () => {
               }
             }
           }
-        }
       }
     } catch (error) {
       console.error('Error in Reminder CRON Job:', error);

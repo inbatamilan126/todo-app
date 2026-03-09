@@ -5,8 +5,18 @@ import { createTaskSchema, updateTaskSchema, moveTaskSchema, createSubtaskSchema
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
-
 router.use(authenticate);
+
+const calculateReminderAt = (dueDate, dueTime, user) => {
+  if (!dueDate) return null;
+  const date = new Date(dueDate);
+  const time = dueTime || user.defaultReminderTime || '09:00';
+  const [hours, minutes] = time.split(':').map(Number);
+  date.setHours(hours, minutes, 0, 0);
+  
+  const reminderMinutes = user.defaultReminderMinutes || 0;
+  return new Date(date.getTime() - (reminderMinutes * 60 * 1000));
+};
 
 // Get all tasks for user (cross-project)
 router.get('/', async (req, res, next) => {
@@ -215,7 +225,18 @@ router.delete('/subtasks/:id', async (req, res, next) => {
 router.post('/project/:projectId', validate(createTaskSchema), async (req, res, next) => {
   try {
     const { projectId } = req.params;
-    const { title, description, dueDate, priority, status, parentId } = req.body;
+    const { 
+      title, 
+      description, 
+      dueDate, 
+      dueTime,
+      reminderEnabled,
+      reminderAt,
+      isReminderCustomized,
+      priority, 
+      status, 
+      parentId 
+    } = req.body;
 
     const project = await prisma.project.findFirst({
       where: { id: projectId, userId: req.user.id },
@@ -241,6 +262,10 @@ router.post('/project/:projectId', validate(createTaskSchema), async (req, res, 
         title,
         description,
         dueDate: dueDate ? new Date(dueDate) : null,
+        dueTime,
+        reminderEnabled: reminderEnabled !== undefined ? reminderEnabled : true,
+        reminderAt: reminderAt ? new Date(reminderAt) : calculateReminderAt(dueDate, dueTime, req.user),
+        isReminderCustomized: isReminderCustomized || false,
         priority: priority || 'medium',
         status: taskStatus,
         position,
@@ -304,7 +329,18 @@ router.get('/:id', async (req, res, next) => {
 router.put('/:id', validate(updateTaskSchema), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, description, dueDate, priority, status, position } = req.body;
+    const { 
+      title, 
+      description, 
+      dueDate, 
+      dueTime,
+      reminderEnabled,
+      reminderAt,
+      isReminderCustomized,
+      priority, 
+      status, 
+      position 
+    } = req.body;
 
     const task = await prisma.task.findFirst({
       where: { id, userId: req.user.id },
@@ -320,6 +356,20 @@ router.put('/:id', validate(updateTaskSchema), async (req, res, next) => {
         ...(title && { title }),
         ...(description !== undefined && { description }),
         ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
+        ...(dueTime !== undefined && { dueTime }),
+        ...(reminderEnabled !== undefined && { reminderEnabled }),
+        ...(reminderAt !== undefined && { reminderAt: reminderAt ? new Date(reminderAt) : null }),
+        ...(isReminderCustomized !== undefined && { isReminderCustomized }),
+        
+        // Auto-recalculate reminderAt if NOT customized and due date/time changed
+        ...((!isReminderCustomized && !task.isReminderCustomized && (dueDate !== undefined || dueTime !== undefined)) && {
+          reminderAt: calculateReminderAt(
+            dueDate !== undefined ? dueDate : task.dueDate,
+            dueTime !== undefined ? dueTime : task.dueTime,
+            req.user
+          )
+        }),
+
         ...(priority && { priority }),
         ...(status && { status }),
         ...(position !== undefined && { position }),

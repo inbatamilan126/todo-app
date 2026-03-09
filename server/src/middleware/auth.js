@@ -21,6 +21,8 @@ export const authenticate = async (req, res, next) => {
         avatarUrl: true,
         provider: true,
         theme: true,
+        defaultReminderMinutes: true,
+        defaultReminderTime: true,
         createdAt: true,
       },
     });
