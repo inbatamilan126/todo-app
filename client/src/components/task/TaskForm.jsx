@@ -4,7 +4,9 @@ import { DatePicker } from '../common/DatePicker';
 import { Button } from '../common/Button';
 import { PRIORITY_LABELS, TASK_STATUS_LABELS } from '../../utils/constants';
 import { useLabels } from '../../context/LabelContext';
-import { Tag } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Tag, Bell, Edit2, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export function TaskForm({
   formData,
@@ -16,6 +18,8 @@ export function TaskForm({
   projects,
 }) {
   const { labels } = useLabels();
+  const { user } = useAuth();
+  const [isEditingReminder, setIsEditingReminder] = useState(false);
 
   const toggleLabel = (labelId) => {
     const current = formData.labelIds || [];
@@ -23,6 +27,64 @@ export function TaskForm({
       ? current.filter((id) => id !== labelId)
       : [...current, labelId];
     onChange({ ...formData, labelIds: updated });
+  };
+
+  const calculateDefaultReminder = (dueDate, dueTime) => {
+    if (!dueDate) return null;
+    const date = new Date(dueDate);
+    const time = dueTime || user?.defaultReminderTime || '09:00';
+    const [hours, minutes] = time.split(':').map(Number);
+    date.setHours(hours, minutes, 0, 0);
+    
+    const reminderMinutes = user?.defaultReminderMinutes || 0;
+    return new Date(date.getTime() - (reminderMinutes * 60 * 1000));
+  };
+
+  // Sync reminderAt if not customized
+  useEffect(() => {
+    if (!formData.isReminderCustomized && formData.dueDate) {
+      const calculated = calculateDefaultReminder(formData.dueDate, formData.dueTime);
+      if (calculated && (!formData.reminderAt || new Date(formData.reminderAt).getTime() !== calculated.getTime())) {
+        onChange({ ...formData, reminderAt: calculated.toISOString() });
+      }
+    }
+  }, [formData.dueDate, formData.dueTime, formData.isReminderCustomized, user]);
+
+  const handleReminderDateChange = (date) => {
+    if (!date || !formData.reminderAt) return;
+    const current = new Date(formData.reminderAt);
+    const updated = new Date(date);
+    updated.setHours(current.getHours(), current.getMinutes(), 0, 0);
+    onChange({ ...formData, reminderAt: updated.toISOString(), isReminderCustomized: true });
+  };
+
+  const handleReminderTimeChange = (time) => {
+    if (!time || !formData.reminderAt) return;
+    const [hours, minutes] = time.split(':').map(Number);
+    const updated = new Date(formData.reminderAt);
+    updated.setHours(hours, minutes, 0, 0);
+    onChange({ ...formData, reminderAt: updated.toISOString(), isReminderCustomized: true });
+  };
+
+  const resetReminder = () => {
+    const calculated = calculateDefaultReminder(formData.dueDate, formData.dueTime);
+    onChange({ 
+      ...formData, 
+      reminderAt: calculated ? calculated.toISOString() : null, 
+      isReminderCustomized: false 
+    });
+    setIsEditingReminder(false);
+  };
+
+  const formatReminderText = (reminderAt) => {
+    if (!reminderAt) return 'Not set';
+    const date = new Date(reminderAt);
+    return date.toLocaleString([], { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
   const priorityOptions = Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
     value,
@@ -99,7 +161,7 @@ export function TaskForm({
               
               <div className="flex items-center justify-between pt-1 pr-1">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  <span className="text-amber-500">🔔</span> Remind me
+                  <Bell className="h-3 w-3 text-amber-500" /> Remind me
                 </label>
                 <button
                   type="button"
@@ -115,6 +177,66 @@ export function TaskForm({
                   />
                 </button>
               </div>
+
+              {formData.reminderEnabled !== false && (
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 mt-1 border border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">
+                      Target Reminder
+                    </span>
+                    <div className="flex gap-1">
+                      {formData.isReminderCustomized && (
+                        <button
+                          type="button"
+                          onClick={resetReminder}
+                          title="Reset to default"
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-400 hover:text-primary-500 transition-colors"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingReminder(!isEditingReminder)}
+                        className={`p-1 rounded transition-colors ${
+                          isEditingReminder 
+                            ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-400' 
+                            : 'hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400'
+                        }`}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {!isEditingReminder ? (
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                      {formatReminderText(formData.reminderAt)}
+                      {formData.isReminderCustomized && (
+                        <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded italic">
+                          Manual
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <DatePicker
+                        label="Reminder Date"
+                        value={formData.reminderAt}
+                        onChange={handleReminderDateChange}
+                        className="text-xs"
+                      />
+                      <Input
+                        type="time"
+                        label="Reminder Time"
+                        value={formData.reminderAt ? new Date(formData.reminderAt).toTimeString().slice(0, 5) : ''}
+                        onChange={(e) => handleReminderTimeChange(e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -203,7 +325,20 @@ export function TaskForm({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onChange({ ...formData, title: '', description: '', dueDate: null, dueTime: '', reminderEnabled: true, priority: 'medium', status: 'todo', labelIds: [] });
+              onChange({ 
+                ...formData, 
+                title: '', 
+                description: '', 
+                dueDate: null, 
+                dueTime: '', 
+                reminderEnabled: true, 
+                reminderAt: null,
+                isReminderCustomized: false,
+                priority: 'medium', 
+                status: 'todo', 
+                labelIds: [] 
+              });
+              setIsEditingReminder(false);
             }}
           >
             Clear

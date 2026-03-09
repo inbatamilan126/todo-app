@@ -111,6 +111,14 @@ export function Settings() {
     }
   };
 
+  const handleReminderTimeChange = async (time) => {
+    try {
+      await updatePreferences({ defaultReminderTime: time });
+    } catch (error) {
+      console.error('Failed to update default reminder time', error);
+    }
+  };
+
   const handleThemeChange = async (newTheme) => {
     setTheme(newTheme);
     try {
@@ -253,6 +261,22 @@ export function Settings() {
             </select>
             <p className="mt-2 text-sm text-gray-500">
               When you add a time to a task, we will automatically set a reminder for this far in advance.
+            </p>
+          </div>
+
+          {/* Default Task Time (Fallback) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Default Task Time
+            </label>
+            <Input
+              type="time"
+              value={user?.defaultReminderTime || '09:00'}
+              onChange={(e) => handleReminderTimeChange(e.target.value)}
+              className="max-w-[150px]"
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              This time will be used for reminders if you set a due date but leave the time empty.
             </p>
           </div>
         </div>
