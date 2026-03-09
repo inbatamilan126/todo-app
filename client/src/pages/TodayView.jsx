@@ -21,15 +21,6 @@ export function TodayView() {
            d1.getDate() === d2.getDate();
   };
 
-  const isTodayOrOverdue = (date) => {
-    if (!date) return false;
-    const d = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    d.setHours(0, 0, 0, 0);
-    return d <= today || isSameDay(d, today);
-  };
-
   const tasks = contextTasks.filter(t => {
     if (!t.dueDate) return false;
     
