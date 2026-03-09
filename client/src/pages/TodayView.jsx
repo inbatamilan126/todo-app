@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTasks } from '../context/TaskContext';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskModal } from '../components/task/TaskModal';
+import { TASK_STATUSES } from '../utils/constants';
 
 export function TodayView() {
   const { tasks: contextTasks, loading, fetchTasks, reorderTasks } = useTasks();
@@ -29,7 +30,26 @@ export function TodayView() {
     return d <= today || isSameDay(d, today);
   };
 
-  const tasks = contextTasks.filter(t => isTodayOrOverdue(t.dueDate));
+  const tasks = contextTasks.filter(t => {
+    if (!t.dueDate) return false;
+    
+    const d = new Date(t.dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+
+    // If due today, show it regardless of status
+    if (isSameDay(d, today)) return true;
+    
+    // If overdue (due date is before today)
+    if (d < today) {
+      // Only show if it's not done
+      return t.status !== TASK_STATUSES.DONE;
+    }
+
+    // Future tasks are not shown in Today view
+    return false;
+  });
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
