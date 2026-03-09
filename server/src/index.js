@@ -11,6 +11,7 @@ import passport from 'passport';
 import prisma from './config/db.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupWebSocket } from './services/websocket.js';
+import { startCronJobs } from './services/cron.js';
 
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
@@ -84,6 +85,16 @@ app.use(errorHandler);
 
 // Setup WebSocket
 setupWebSocket(io);
+
+// Start Cron Jobs for Push Notifications and Garbage Collection
+startCronJobs();
+
+// Log VAPID state for production debugging
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  console.log('✓ VAPID keys loaded successfully for push notifications');
+} else {
+  console.warn('⚠️ VAPID keys are missing. Push notifications will not work.');
+}
 
 const PORT = process.env.PORT || 5000;
 

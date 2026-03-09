@@ -163,6 +163,8 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
         avatarUrl: true,
         provider: true,
         theme: true,
+        defaultReminderMinutes: true,
+        pushEnabled: true,
         createdAt: true,
       },
     });
@@ -200,6 +202,8 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
         avatarUrl: user.avatarUrl,
         provider: user.provider,
         theme: user.theme,
+        defaultReminderMinutes: user.defaultReminderMinutes,
+        pushEnabled: user.pushEnabled,
         createdAt: user.createdAt,
       },
       token,
@@ -233,6 +237,8 @@ router.put('/profile', authenticate, validate(updateProfileSchema), async (req, 
         avatarUrl: true,
         provider: true,
         theme: true,
+        defaultReminderMinutes: true,
+        pushEnabled: true,
         createdAt: true,
       },
     });
@@ -258,6 +264,38 @@ router.put('/theme', authenticate, validate(updateThemeSchema), async (req, res,
         avatarUrl: true,
         provider: true,
         theme: true,
+        defaultReminderMinutes: true,
+        pushEnabled: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update notification preferences
+router.put('/preferences', authenticate, async (req, res, next) => {
+  try {
+    const { defaultReminderMinutes, pushEnabled } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { 
+        ...(defaultReminderMinutes !== undefined && { defaultReminderMinutes }),
+        ...(pushEnabled !== undefined && { pushEnabled })
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        provider: true,
+        theme: true,
+        defaultReminderMinutes: true,
+        pushEnabled: true,
         createdAt: true,
       },
     });
