@@ -1,7 +1,7 @@
 # Todo App - Project Specification
 
-> **Version:** 1.1.0  
-> **Last Updated:** 2026-03-08  
+> **Version:** 1.2.0  
+> **Last Updated:** 2026-03-10  
 > **Status:** Active Development
 
 ---
@@ -27,7 +27,7 @@
 |-----------|-------|
 | **Project Name** | Todo App |
 | **Type** | Cross-platform Kanban Task Management Application |
-| **Core Features** | Task CRUD, Projects/Categories, Priority Levels, Due Dates, Task Notes, Subtasks, Kanban Board |
+| **Core Features** | Task CRUD, Projects/Categories, Priority Levels, Due Dates/Times, Task Reminders (Web Push), Labels, Subtasks, Kanban Board, Today/Calendar Views |
 | **Target Users** | Individual users managing personal tasks |
 | **Platform** | Web (PWA), Mobile Browser, Desktop Browser |
 
@@ -46,6 +46,8 @@
 | WebSocket | Socket.io | 4.x |
 | Validation | Zod | 3.x |
 | Password Hashing | bcrypt | 5.x |
+| Push Notifications | web-push | 3.x |
+| CRON Jobs | node-cron | 3.x |
 
 ### Frontend
 | Layer | Technology | Version |
@@ -123,7 +125,11 @@ CREATE TABLE users (
   name          VARCHAR(100)   NOT NULL,
   avatar_url    VARCHAR(500),
   provider      VARCHAR(20)    DEFAULT 'email',  -- 'email', 'google', 'github'
+  provider_id   VARCHAR(255),              -- OAuth provider ID
   theme         VARCHAR(10)    DEFAULT 'system', -- 'light', 'dark', 'system'
+  default_reminder_minutes INTEGER DEFAULT 30,
+  default_reminder_time VARCHAR(5) DEFAULT '09:00',
+  push_enabled  BOOLEAN        DEFAULT false,
   created_at    TIMESTAMP      DEFAULT NOW(),
   updated_at    TIMESTAMP      DEFAULT NOW()
 );
@@ -149,14 +155,19 @@ CREATE TABLE tasks (
   project_id  UUID        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   parent_id   UUID        REFERENCES tasks(id) ON DELETE CASCADE,  -- Self-reference for subtasks
   user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title       VARCHAR(255) NOT NULL,
-  description TEXT,
-  due_date    TIMESTAMP,
-  priority    VARCHAR(10)  DEFAULT 'medium',  -- 'low', 'medium', 'high'
-  status      VARCHAR(20)  DEFAULT 'todo',    -- 'todo', 'in_progress', 'done'
-  position    INTEGER      DEFAULT 0,         -- For Kanban ordering
-  created_at  TIMESTAMP    DEFAULT NOW(),
-  updated_at  TIMESTAMP    DEFAULT NOW()
+  title         VARCHAR(255) NOT NULL,
+  description   TEXT,
+  due_date      TIMESTAMP,
+  due_time      VARCHAR(5),        -- 'HH:mm'
+  priority      VARCHAR(10)  DEFAULT 'medium',  -- 'low', 'medium', 'high'
+  status        VARCHAR(20)  DEFAULT 'todo',    -- 'todo', 'in_progress', 'done'
+  position      INTEGER      DEFAULT 0,         -- For Kanban ordering
+  reminder_enabled BOOLEAN   DEFAULT true,
+  reminder_at   TIMESTAMP,
+  is_reminder_customized BOOLEAN DEFAULT false,
+  reminded_at   TIMESTAMP,
+  created_at    TIMESTAMP    DEFAULT NOW(),
+  updated_at    TIMESTAMP    DEFAULT NOW()
 );
 ```
 
@@ -191,7 +202,19 @@ CREATE TABLE notifications (
   message     TEXT,
   data        JSONB,                 -- { taskId, projectId, etc. }
   read        BOOLEAN   DEFAULT false,
+  read_at     TIMESTAMP,
+  is_archived BOOLEAN   DEFAULT false,
   created_at  TIMESTAMP DEFAULT NOW()
+);
+
+-- 3.6 push_subscriptions
+CREATE TABLE push_subscriptions (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint    TEXT        UNIQUE NOT NULL,
+  p256dh      TEXT        NOT NULL,
+  auth        TEXT        NOT NULL,
+  created_at  TIMESTAMP   DEFAULT NOW()
 );
 
 CREATE INDEX idx_notifications_user_unread 
@@ -218,6 +241,7 @@ Production: https://api.todoapp.com/api
 | GET | `/auth/me` | Get current user | Yes |
 | PUT | `/auth/profile` | Update profile | Yes |
 | PUT | `/auth/theme` | Update theme preference | Yes |
+| PUT | `/auth/preferences` | Update notification preferences | Yes |
 | POST | `/auth/logout` | Logout | Yes |
 
 ### Project Endpoints
@@ -242,6 +266,7 @@ Production: https://api.todoapp.com/api
 | PUT | `/tasks/:id` | Update task | Yes |
 | DELETE | `/tasks/:id` | Delete task | Yes |
 | PUT | `/tasks/:id/move` | Move task (status/position) | Yes |
+| PUT | `/tasks/reorder` | Reorder multiple tasks (bulk) | Yes |
 | POST | `/tasks/:id/subtasks` | Add subtask | Yes |
 | PUT | `/tasks/subtasks/:id` | Update subtask | Yes |
 | DELETE | `/tasks/subtasks/:id` | Delete subtask | Yes |
@@ -263,7 +288,18 @@ Production: https://api.todoapp.com/api
 | GET | `/notifications/unread` | Get unread notifications | Yes |
 | GET | `/notifications/count` | Get unread count | Yes |
 | PUT | `/notifications/:id/read` | Mark as read | Yes |
+| PUT | `/notifications/:id/toggle-read` | Toggle read status | Yes |
+| PUT | `/notifications/:id/archive` | Archive notification | Yes |
 | PUT | `/notifications/read-all` | Mark all as read | Yes |
+
+### Push Notification Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| GET | `/notifications/vapid-public-key` | Get public VAPID key | Yes |
+| POST | `/notifications/subscribe` | Subscribe to push | Yes |
+| DELETE | `/notifications/unsubscribe` | Unsubscribe from push | Yes |
+| GET | `/health` | Server health check | No |
 
 ### WebSocket Events
 
@@ -499,7 +535,8 @@ server/
   - Drag and drop between columns
   - Drag to reorder within column
   - Scroll horizontally on mobile
-- **Props:** `projectId`, `tasks`
+  - Swipe to change status (Mobile)
+- **Props:** `projectId`, `tasks`, `allowReordering`, `showProject`
 
 #### KanbanColumn
 - **Header:** Column name + task count
@@ -514,13 +551,15 @@ server/
 - **Display:**
   - Title (truncated to 2 lines)
   - Priority badge (colored dot)
-  - Due date (if set)
+  - Due date (if set, red if overdue)
   - Subtask progress (e.g., "2/4")
+  - Labels visualization
 - **Interactions:**
   - Click to open TaskModal
-  - Drag handle
+  - Drag handle (Desktop)
   - Quick actions on hover (complete, delete)
-- **Props:** `task`, `onClick`, `onComplete`, `onDelete`
+  - Scale down and tilt effect during drag
+- **Props:** `task`, `onClick`, `onComplete`, `onDelete`, `allowReordering`, `showProject`
 
 ### 6.4 Task Components
 
@@ -602,37 +641,46 @@ server/
 **Layout:**
 - Focus on tasks due today or overdue.
 - Simplified list view with quick-complete.
+- Filtering: Only show past-due activities with status 'To Do' or 'In Progress'.
+- Reordering: Disabled (`allowReordering={false}`) to maintain project-specific order.
 
 ### 7.5 Project View (`/projects/:id`)
 
 **Layout:**
 - Full Kanban board for a specific project.
-- Project-specific settings and members (if applicable).
-
-### 7.6 Calendar View (`/calendar`)
-
-**Layout:**
-- Monthly/Weekly view of tasks based on due date.
-- Mobile-optimized grid.
-
-**Layout:**
-- Full Kanban board
-- Project header with name, color, menu
-- 3 columns: To Do, In Progress, Done
+- Project header with name, color, menu.
+- 3 columns: To Do, In Progress, Done.
 
 **Features:**
-- Drag and drop tasks
-- Quick add task to any column
-- Filter by priority (optional)
-- Search within project
+- Drag and drop tasks.
+- Quick add task to any column.
+- Filter by priority (optional).
+- Search within project.
 
-### 7.5 Settings Page (`/settings`)
+### 7.6 Settings Page (`/settings`)
 
 **Sections:**
 - **Profile:** Name, Email, Avatar
 - **Preferences:** Theme (Light/Dark/System)
+- **Notifications & Reminders:**
+  - Push Notifications toggle (Web Push registration)
+  - Default Task Reminder (minutes before due time)
+  - Default Task Time (fallback for tasks without time)
 - **Account:** Change password (if email user)
 - **Danger Zone:** Delete account
+
+### 7.7 Notifications Page (`/notifications`)
+
+**Layout:**
+- Scrollable list of recent notifications.
+- Filtering: All, Unread.
+- "Mark all as read" action.
+- Swipe to archive (Mobile).
+
+**Features:**
+- Real-time updates via Socket.io.
+- Click notification to navigate to relevant entity (task/project).
+- Archive old notifications to keep list clean.
 
 ---
 
@@ -674,9 +722,17 @@ server/
 ```
 
 **Service Worker:**
-- Cache: HTML, CSS, JS, static assets
-- Network-first for API calls
-- Background sync for offline actions
+- Cache: HTML, CSS, JS, static assets.
+- Network-first for API calls.
+- Background sync for offline actions.
+- Web Push: Handle `push` events to show system notifications.
+
+### 8.3 CRON Jobs (Backend)
+
+| Job | Frequency | Description |
+|-----|-----------|-------------|
+| **Reminder Job** | Every Minute | Checks for tasks with `reminderAt <= now` and sends push/in-app notifications. |
+| **Archival Job** | Daily (Midnight) | Archives read notifications older than 3 days. |
 
 ---
 
@@ -798,6 +854,12 @@ cd client && npm run dev
 - [x] User can add subtasks
 - [x] User can toggle subtask completion
 - [x] User can drag task between columns
+- [x] User can reorder tasks within a column (Project View only)
+- [x] User can set specific reminder times
+- [x] User can toggle push notifications in Settings
+- [x] Tasks show red due date when overdue (if not done)
+- [x] Mobile-friendly calendar view without excessive scrolling
+- [x] "Today" view only shows pending overdue tasks
 - [x] User can reorder tasks within column
 
 ### UI/UX
