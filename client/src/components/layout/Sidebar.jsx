@@ -298,9 +298,17 @@ export function Sidebar({ isOpen, onClose }) {
         {/* User section */}
         <div className="border-t border-gray-200 p-3 dark:border-gray-800">
           <div className="flex items-center gap-3 rounded-lg p-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600 dark:bg-primary-900 dark:text-primary-400">
-              {user?.name?.charAt(0).toUpperCase() || '?'}
-            </div>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user?.name}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600 dark:bg-primary-900 dark:text-primary-400">
+                {user?.name?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
             <div className="flex-1 truncate">
               <p className="truncate text-sm font-medium">{user?.name || 'Unknown'}</p>
               <p className="truncate text-xs text-gray-500">{user?.email || 'No email'}</p>
