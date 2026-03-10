@@ -283,7 +283,7 @@ router.put('/theme', authenticate, validate(updateThemeSchema), async (req, res,
 // Update notification preferences
 router.put('/preferences', authenticate, async (req, res, next) => {
   try {
-    const { defaultReminderMinutes, pushEnabled } = req.body;
+    const { defaultReminderMinutes, defaultReminderTime, pushEnabled } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.user.id },
