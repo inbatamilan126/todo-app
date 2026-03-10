@@ -69,6 +69,9 @@ app.use(cors({
 app.use(express.json({ limit: '10kb', strict: true }));
 app.use(express.urlencoded({ limit: '10kb', extended: true, parameterLimit: 1000 }));
 
+// Trust proxy for correct IP detection behind reverse proxies (Nginx, Docker, etc.)
+app.set('trust proxy', 1);
+
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
