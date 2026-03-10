@@ -34,7 +34,13 @@ export function TaskProvider({ children }) {
   }, []);
 
   const createTask = async (projectId, data) => {
-    const response = await api.post(`/tasks/project/${projectId}`, data);
+    // Fix: Convert empty string dueTime to null to pass Zod validation
+    const sanitizedData = {
+      ...data,
+      dueTime: data.dueTime === '' ? null : data.dueTime,
+    };
+    
+    const response = await api.post(`/tasks/project/${projectId}`, sanitizedData);
     const newTask = response.data.task;
     // Don't add to state here - let the socket event handle it to avoid duplicates
     // The socket event will fire and add the task
@@ -42,7 +48,13 @@ export function TaskProvider({ children }) {
   };
 
   const updateTask = async (taskId, data) => {
-    const response = await api.put(`/tasks/${taskId}`, data);
+    // Fix: Convert empty string dueTime to null to pass Zod validation
+    const sanitizedData = {
+      ...data,
+      dueTime: data.dueTime === '' ? null : data.dueTime,
+    };
+    
+    const response = await api.put(`/tasks/${taskId}`, sanitizedData);
     const updatedTask = response.data.task;
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? updatedTask : t))
