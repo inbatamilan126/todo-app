@@ -1,6 +1,6 @@
 # Todo App - Project Specification
 
-> **Version:** 1.2.0  
+> **Version:** 1.3.0  
 > **Last Updated:** 2026-03-10  
 > **Status:** Active Development
 
@@ -17,7 +17,8 @@
 7. [Pages Specification](#7-pages-specification)
 8. [Real-time & PWA](#8-real-time--pwa)
 9. [Mobile Responsiveness](#9-mobile-responsiveness)
-10. [Future Extensibility](#10-future-extensibility)
+10. [Security](#10-security)
+11. [Future Extensibility](#11-future-extensibility)
 
 ---
 
@@ -48,6 +49,8 @@
 | Password Hashing | bcrypt | 5.x |
 | Push Notifications | web-push | 3.x |
 | CRON Jobs | node-cron | 3.x |
+| Rate Limiting | express-rate-limit | - |
+| Security Headers | Helmet | - |
 
 ### Frontend
 | Layer | Technology | Version |
@@ -772,9 +775,63 @@ server/
 | Pull down | Refresh |
 | Pinch | Zoom (disabled for UX) |
 
+## 10. Security
+
+### 10.1 Rate Limiting
+
+| Limiter | Window | Max Requests | Purpose |
+|---------|--------|--------------|----------|
+| authLimiter | 15 minutes | 10 | Prevents brute force on auth endpoints |
+| apiLimiter | 1 minute | 100 | General API protection |
+| writeLimiter | 1 minute | 30 | Write operation protection |
+
+### 10.2 Security Headers (Helmet)
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| Content-Security-Policy | strict CSP | Prevents XSS and data injection |
+| X-Content-Type-Options | nosniff | Prevents MIME-type sniffing |
+| X-Frame-Options | SAMEORIGIN | Prevents clickjacking |
+| X-XSS-Protection | 1; mode=block | XSS filter (legacy browsers) |
+| Referrer-Policy | strict-origin-when-cross-origin | Controls referrer info |
+| Permissions-Policy | camera=(), microphone=(), geolocation=() | Disables unused features |
+
+### 10.3 Request Size Limits
+
+| Limit | Value | Purpose |
+|-------|-------|---------|
+| JSON Body | 10KB | Prevents large payload attacks |
+| URL Encoded | 10KB | Prevents parameter pollution |
+| Parameters | 1000 | Prevents parameter exhaustion |
+
+### 10.4 WebSocket Security
+
+| Feature | Implementation |
+|---------|----------------|
+| Authentication | JWT token verification on connection |
+| Rate Limiting | 20 messages per second per connection |
+| Room Validation | Project ID validation before join |
+| Periodic Cleanup | Rate limit entries cleaned every minute |
+
+### 10.5 Error Handling
+
+| Environment | Error Details | Stack Trace | Message |
+|-------------|---------------|-------------|---------|
+| Development | ✅ Shown | ✅ Shown | Original message |
+| Production | ❌ Hidden | ❌ Hidden | Generic message |
+
+### 10.6 Session Security
+
+| Setting | Value |
+|---------|-------|
+| httpOnly | true (prevents XSS cookie theft) |
+| secure | true in production only |
+| sameSite | strict |
+| maxAge | 24 hours |
+
 ---
 
-## 10. Future Extensibility
+## 11. Future Extensibility
 
 ### Planned Features (Not in Initial Scope)
 
@@ -924,6 +981,11 @@ VITE_WS_URL=http://localhost:5000
 | Dark Mode | ✅ Complete | Tailwind dark mode and context set up |
 | Mobile UI | ✅ Complete | Off-canvas drawer and bottom nav implemented |
 | PWA | ✅ Complete | vite-plugin-pwa configured |
+| Rate Limiting | ✅ Complete | express-rate-limit configured |
+| Security Headers | ✅ Complete | Helmet middleware configured |
+| WebSocket Rate Limit | ✅ Complete | 20 msgs/sec per connection |
+| Error Sanitization | ✅ Complete | Production-safe error messages |
+| Request Size Limits | ✅ Complete | 10KB body limit configured |
 
 ---
 
