@@ -7,7 +7,7 @@ import { cn } from '../utils/cn';
 import { pushService } from '../services/pushService';
 
 export function Settings() {
-  const { user, updateUser, updateTheme, updatePreferences } = useAuth();
+  const { user, updateUser, updateTheme, updatePreferences, connectContacts } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const [name, setName] = useState(user?.name || '');
@@ -279,6 +279,38 @@ export function Settings() {
               This time will be used for reminders if you set a due date but leave the time empty.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Integrations Section */}
+      <section className="mb-8 rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Integrations
+        </h2>
+
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+          <div>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">Google Contacts</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Connect your contacts to mention people in tasks and instantly access their phone or email.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                // connectContacts is exposed via AuthContext
+                // You can get it from the useAuth hook at the top.
+                if (window.confirm("You will be redirected to Google to grant access. Continue?")) {
+                  await connectContacts();
+                }
+              } catch (e) {
+                alert("Failed to initiate connection: " + e.message);
+              }
+            }}
+          >
+            Connect
+          </Button>
         </div>
       </section>
 
