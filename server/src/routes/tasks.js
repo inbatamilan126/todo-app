@@ -270,6 +270,7 @@ router.post('/project/:projectId', validate(createTaskSchema), async (req, res, 
         status: taskStatus,
         position,
         parentId: parentId || null,
+        linkedContacts: req.body.linkedContacts || null,
         ...(req.body.labelIds?.length > 0 && {
           labels: {
             connect: req.body.labelIds.map((id) => ({ id })),
@@ -373,6 +374,7 @@ router.put('/:id', validate(updateTaskSchema), async (req, res, next) => {
         ...(priority && { priority }),
         ...(status && { status }),
         ...(position !== undefined && { position }),
+        ...(req.body.linkedContacts !== undefined && { linkedContacts: req.body.linkedContacts }),
         ...(req.body.labelIds !== undefined && {
           labels: {
             set: req.body.labelIds.map((id) => ({ id })),
