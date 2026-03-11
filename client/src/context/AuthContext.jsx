@@ -227,6 +227,33 @@ export function AuthProvider({ children }) {
     return response.data.user;
   };
 
+  // Incremental Auth for Contacts
+  const connectContacts = async () => {
+    try {
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      const state = generateState();
+      
+      sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+      sessionStorage.setItem('oauth_code_challenge', codeChallenge);
+      
+      const baseUrl = API_URL || '/api';
+      const oauthUrl = new URL(`${baseUrl}/auth/oauth/google`, window.location.origin);
+      
+      // Override scopes to include contacts mapping
+      oauthUrl.searchParams.set('scope', 'profile email https://www.googleapis.com/auth/contacts.readonly');
+      oauthUrl.searchParams.set('code_challenge', codeChallenge);
+      oauthUrl.searchParams.set('code_challenge_method', 'S256');
+      oauthUrl.searchParams.set('state', state);
+      oauthUrl.searchParams.set('pkce', 'true');
+      
+      window.location.href = oauthUrl.toString();
+    } catch (error) {
+      console.error('Contacts connect error:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -236,6 +263,7 @@ export function AuthProvider({ children }) {
         login,
         loginWithToken,
         loginWithOAuth,
+        connectContacts,
         register,
         logout,
         updateUser,
