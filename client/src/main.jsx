@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { TaskProvider } from './context/TaskContext';
 import { LabelProvider } from './context/LabelContext';
+import { ContactsProvider } from './context/ContactsContext';
 import { registerSW } from 'virtual:pwa-register';
 import './styles/globals.css';
 
@@ -18,13 +19,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <ProjectProvider>
-            <LabelProvider>
-              <TaskProvider>
-                <App />
-              </TaskProvider>
-            </LabelProvider>
-          </ProjectProvider>
+          <ContactsProvider>
+            <ProjectProvider>
+              <LabelProvider>
+                <TaskProvider>
+                  <App />
+                </TaskProvider>
+              </LabelProvider>
+            </ProjectProvider>
+          </ContactsProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
