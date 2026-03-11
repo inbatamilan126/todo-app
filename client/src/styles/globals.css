@@ -185,3 +185,66 @@ body {
 .dnd-kit-drag-overlay > * {
   pointer-events: auto;
 }
+
+/* React Mentions Base Styling */
+
+/* Nuke the internal textarea borders injected by Tailwind Forms */
+.mentions-wrapper textarea {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.mentions-wrapper textarea:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  /* Tailwind forms uses a ring */
+  --tw-ring-shadow: 0 0 #0000 !important;
+}
+
+/*
+  react-mentions injects backgroundColor:'white' as an INLINE STYLE on the
+  SuggestionsOverlay div. Inline styles beat CSS classes, so we cannot rely
+  solely on Tailwind dark: variants. The primary fix is the JS-side `style`
+  prop passed to <MentionsInput>. These CSS rules serve as belt-and-suspenders
+  using attribute selectors that work regardless of generated class names.
+*/
+
+/* Light mode: overlay container */
+.mentions-wrapper [class*="suggestions"] {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: #111827 !important;
+}
+
+/* Dark mode: overlay container */
+.dark .mentions-wrapper [class*="suggestions"] {
+  background-color: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  color: #f9fafb !important;
+}
+
+/* Individual suggestion rows — light mode */
+.mentions-wrapper [class*="suggestion"] {
+  background-color: transparent !important;
+  color: #111827 !important;
+}
+
+/* Individual suggestion rows — dark mode */
+.dark .mentions-wrapper [class*="suggestion"] {
+  background-color: transparent !important;
+  color: #f9fafb !important;
+}
+
+/* Hover / selected highlight — light */
+.mentions-wrapper [class*="suggestion"][aria-selected="true"],
+.mentions-wrapper [class*="suggestion"]:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Hover / selected highlight — dark */
+.dark .mentions-wrapper [class*="suggestion"][aria-selected="true"],
+.dark .mentions-wrapper [class*="suggestion"]:hover {
+  background-color: #374151 !important;
+}
+
