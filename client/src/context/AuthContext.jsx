@@ -35,11 +35,10 @@ async function generateCodeChallenge(verifier) {
  * @returns {string}
  */
 function base64URLEncode(buffer) {
-  let str = '';
-  buffer.forEach((byte) => {
-    str += String.fromCharCode(byte);
-  });
-  return btoa(str)
+  // Use a more robust conversion to handle binary Uint8Array data correctly
+  const bytes = new Uint8Array(buffer);
+  const binaryString = Array.from(bytes).map(byte => String.fromCharCode(byte)).join('');
+  return btoa(binaryString)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
