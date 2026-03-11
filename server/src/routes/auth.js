@@ -331,19 +331,31 @@ router.get('/oauth/google', (req, res, next) => {
     });
   }
   
-  // Store PKCE code_challenge in session if provided
+  // Extract PKCE parameters from the query string
   const { code_challenge, code_challenge_method, state } = req.query;
+  
   if (code_challenge) {
-    // Note: We don't need to store this in session for standard PKCE 
-    // when the client sends the verifier back to the token endpoint.
-    // However, we still need to pass it through to Google.
-    console.log('[OAuth] PKCE flow initiated with challenge');
+    console.log('[OAuth] PKCE flow initiated with challenge:', code_challenge);
   }
   
-  passport.authenticate('google', { 
+  // Configure the authentication request
+  const authOptions = {
     scope: ['profile', 'email'],
-    prompt: 'select_account'  // Force account selection each time
-  })(req, res, next);
+    prompt: 'select_account',
+  };
+
+  // Add PKCE parameters to the options if they exist
+  // passport-google-oauth20 will pass these through as query params to Google
+  if (code_challenge) {
+    authOptions.code_challenge = code_challenge;
+    authOptions.code_challenge_method = code_challenge_method || 'S256';
+  }
+  
+  if (state) {
+    authOptions.state = state;
+  }
+  
+  passport.authenticate('google', authOptions)(req, res, next);
 });
 
 
@@ -387,8 +399,10 @@ router.post('/oauth/token', async (req, res) => {
     
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
-      console.error('[OAuth] Token exchange failed:', errorData);
-      return res.status(401).json({ error: 'Failed to exchange code for tokens' });
+      console.error('[OAuth] Token exchange failed. Status:', tokenResponse.status);
+      console.error('[OAuth] Google Error Response:', errorData);
+      console.error('[OAuth] Used Redirect URI:', callbackURL);
+      return res.status(401).json({ error: 'Failed to exchange code for tokens', details: errorData });
     }
     
     const googleTokens = await tokenResponse.json();
