@@ -334,11 +334,19 @@ router.get('/oauth/google', (req, res, next) => {
   // Store PKCE code_challenge in session if provided
   const { code_challenge, code_challenge_method, state } = req.query;
   if (code_challenge) {
+    console.log('[OAuth] Storing PKCE challenge in session:', code_challenge);
     req.session.oauth_code_challenge = code_challenge;
     req.session.oauth_code_challenge_method = code_challenge_method || 'S256';
     if (state) {
       req.session.oauth_state = state;
     }
+    // Explicitly save session to ensure it persists across the redirect
+    req.session.save((err) => {
+      if (err) console.error('[OAuth] Session save error:', err);
+      else console.log('[OAuth] Session saved successfully before redirect');
+    });
+  } else {
+    console.warn('[OAuth] No code_challenge provided in request');
   }
   
   passport.authenticate('google', { 
@@ -366,7 +374,15 @@ router.post('/oauth/token', async (req, res) => {
     const storedChallenge = req.session.oauth_code_challenge;
     const challengeMethod = req.session.oauth_code_challenge_method || 'S256';
     
+    console.log('[PKCE] Token exchange request:', { 
+      hasSession: !!req.session,
+      sessionId: req.sessionID,
+      storedChallenge,
+      providedVerifier: code_verifier ? '(exists)' : '(missing)'
+    });
+
     if (!storedChallenge) {
+      console.error('[PKCE] No stored challenge found for session ID:', req.sessionID);
       return res.status(400).json({ error: 'No PKCE challenge found. Please start a new OAuth flow.' });
     }
     
