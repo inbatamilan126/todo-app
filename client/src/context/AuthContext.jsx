@@ -147,6 +147,8 @@ export function AuthProvider({ children }) {
       oauthUrl.searchParams.set('code_challenge_method', 'S256');
       oauthUrl.searchParams.set('state', state);
       oauthUrl.searchParams.set('pkce', 'true');
+      oauthUrl.searchParams.set('prompt', 'select_account'); // Standard login: don't force consent again
+      
       
       // Redirect to OAuth provider
       window.location.href = oauthUrl.toString();
@@ -246,6 +248,8 @@ export function AuthProvider({ children }) {
       oauthUrl.searchParams.set('code_challenge_method', 'S256');
       oauthUrl.searchParams.set('state', state);
       oauthUrl.searchParams.set('pkce', 'true');
+      oauthUrl.searchParams.set('prompt', 'consent'); // Force consent screen to show the new contacts permission
+      
       
       window.location.href = oauthUrl.toString();
     } catch (error) {

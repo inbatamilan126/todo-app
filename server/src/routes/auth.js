@@ -359,11 +359,16 @@ router.get('/oauth/google', (req, res, next) => {
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('prompt', 'select_account consent'); // Force account selection and re-consent
+  const requestedPrompt = req.query.prompt || 'select_account';
+  authUrl.searchParams.set('prompt', requestedPrompt);
   
   // Scopes are space-separated. Allow the client to override, but always ensure basic profile info.
   const requestedScope = req.query.scope || 'profile email';
   authUrl.searchParams.set('scope', requestedScope);
+  
+  // Crucial fix: Tell Google to include any scopes the user previously granted to us.
+  // This prevents losing the `contacts.readonly` permission on a fresh login!
+  authUrl.searchParams.set('include_granted_scopes', 'true');
   
   if (code_challenge) {
     authUrl.searchParams.set('code_challenge', code_challenge);
