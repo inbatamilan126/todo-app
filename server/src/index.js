@@ -66,8 +66,8 @@ app.set('trust proxy', 1);
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-  resave: true, // Force session to be saved back to the session store
-  saveUninitialized: true, // Force a session that is "uninitialized" to be saved to the store
+  resave: false,
+  saveUninitialized: false,
   proxy: true, // Required for secure cookies behind a proxy (Nginx, Docker, etc.)
   cookie: {
     secure: process.env.NODE_ENV === 'production',

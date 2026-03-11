@@ -334,19 +334,10 @@ router.get('/oauth/google', (req, res, next) => {
   // Store PKCE code_challenge in session if provided
   const { code_challenge, code_challenge_method, state } = req.query;
   if (code_challenge) {
-    console.log('[OAuth] Storing PKCE challenge in session:', code_challenge);
-    req.session.oauth_code_challenge = code_challenge;
-    req.session.oauth_code_challenge_method = code_challenge_method || 'S256';
-    if (state) {
-      req.session.oauth_state = state;
-    }
-    // Explicitly save session to ensure it persists across the redirect
-    req.session.save((err) => {
-      if (err) console.error('[OAuth] Session save error:', err);
-      else console.log('[OAuth] Session saved successfully before redirect');
-    });
-  } else {
-    console.warn('[OAuth] No code_challenge provided in request');
+    // Note: We don't need to store this in session for standard PKCE 
+    // when the client sends the verifier back to the token endpoint.
+    // However, we still need to pass it through to Google.
+    console.log('[OAuth] PKCE flow initiated with challenge');
   }
   
   passport.authenticate('google', { 
@@ -370,47 +361,9 @@ router.post('/oauth/token', async (req, res) => {
       return res.status(400).json({ error: 'Missing provider' });
     }
     
-    // Verify code_verifier against the stored code_challenge
-    const storedChallenge = req.session.oauth_code_challenge;
-    const challengeMethod = req.session.oauth_code_challenge_method || 'S256';
-    
-    console.log('[PKCE] Token exchange request:', { 
-      hasSession: !!req.session,
-      sessionId: req.sessionID,
-      storedChallenge,
-      providedVerifier: code_verifier ? '(exists)' : '(missing)'
-    });
-
-    if (!storedChallenge) {
-      console.error('[PKCE] No stored challenge found for session ID:', req.sessionID);
-      return res.status(400).json({ error: 'No PKCE challenge found. Please start a new OAuth flow.' });
-    }
-    
-    // Verify the code_verifier matches the code_challenge
-    const crypto = await import('crypto');
-    
-    if (challengeMethod === 'S256') {
-      // SHA-256 hash the code_verifier and compare with code_challenge
-      const verifierHash = crypto.createHash('sha256')
-        .update(code_verifier)
-        .digest('base64url');
-      
-      if (verifierHash !== storedChallenge) {
-        console.error('[PKCE] Code verifier mismatch:', { expected: storedChallenge, got: verifierHash });
-        return res.status(401).json({ error: 'Invalid code_verifier' });
-      }
-    } else if (challengeMethod === 'plain') {
-      // Plain method (not recommended for production)
-      if (code_verifier !== storedChallenge) {
-        return res.status(401).json({ error: 'Invalid code_verifier' });
-      }
-    } else {
-      return res.status(400).json({ error: 'Unsupported code_challenge_method' });
-    }
-    
     // For Google OAuth, we need to exchange the code for tokens
-    // Since we're using Passport, we'll do a simplified approach:
-    // Re-authenticate with Google using the code
+    // We pass the code_verifier directly to Google for verification.
+    // This makes the exchange stateless on our server.
     
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -428,6 +381,7 @@ router.post('/oauth/token', async (req, res) => {
         client_secret: clientSecret,
         redirect_uri: callbackURL,
         grant_type: 'authorization_code',
+        code_verifier: code_verifier, // Pass the verifier to Google!
       }),
     });
     
