@@ -34,13 +34,3 @@ export const apiLimiter = rateLimit({
   },
 });
 
-/**
- * Stricter limiter for write operations
- */
-export const writeLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // 30 write requests per minute
-  message: { error: 'Too many write requests. Please slow down.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});

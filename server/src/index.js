@@ -50,15 +50,6 @@ app.use(helmet({
   },
 }));
 
-// Additional security headers
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
-
 // CORS
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -101,11 +92,11 @@ passport.deserializeUser(async (id, done) => {
 });
 
 
-// Rate limiting - apply to all /api routes
-app.use('/api', apiLimiter);
-
-// Routes with stricter auth limiting
+// Routes
 app.use('/api/auth', authLimiter, authRoutes);
+
+// Apply general API rate limiting to all other /api routes
+app.use('/api', apiLimiter);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
