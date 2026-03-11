@@ -56,35 +56,14 @@ export function Login() {
   }, [navigate, loginWithToken]);
 
   const handleGoogleLogin = () => {
-    // Use ONLY viewport width for mobile detection - this is the most reliable
-    // because viewport size immediately updates when resizing/disabling emulation.
-    // Touch events (ontouchstart, maxTouchPoints) can persist after disabling emulation.
-    const isMobile = window.innerWidth < 768;
-    
+    // Use redirect flow for OAuth (more reliable than popup)
+    // The server will redirect back with token after Google auth
     const googleAuthUrl = `${API_URL}/auth/oauth/google`;
     
-    if (isMobile) {
-      const redirectUrl = `${googleAuthUrl}?mobile=true`;
-      console.log('[OAuth] Mobile redirect to:', redirectUrl);
-      window.location.href = redirectUrl;
-    } else {
-      setOauthLoading(true);
-      const width = 500;
-      const height = 600;
-      const left = (window.innerWidth - width) / 2;
-      const top = (window.innerHeight - height) / 2;
-      // Pass popup=true to tell server this is a popup flow, bypassing UA-based detection
-      const popup = window.open(
-        `${googleAuthUrl}?popup=true`,
-        'Google Login',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-      
-      // Reset loading state if popup is blocked or closed
-      if (!popup || popup.closed) {
-        setOauthLoading(false);
-      }
-    }
+    // Always use redirect flow - it's more reliable than popup
+    // which loses opener reference after OAuth redirect
+    console.log('[OAuth] Redirecting to Google auth');
+    window.location.href = googleAuthUrl;
   };
 
   const handleSubmit = async (e) => {

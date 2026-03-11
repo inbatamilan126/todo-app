@@ -387,45 +387,8 @@ router.get('/oauth/google/callback', (req, res, next) => {
       
       console.log('[OAuth] isMobile:', isMobile, 'wantsPopup:', wantsPopup, 'wantsMobile:', wantsMobile, 'byUA:', isMobileByUA, 'Client URL:', clientUrl);
       
-      if (isMobile) {
-        // Mobile: redirect with token
-        res.redirect(`${clientUrl}/dashboard?token=${token}`);
-      } else {
-        // Popup: send HTML to close popup and pass token to parent
-        res.send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Login Successful</title>
-            <style>
-              body { font-family: system-ui, -apple-system, sans-serif; display: flex; 
-                     align-items: center; justify-content: center; height: 100vh; margin: 0;
-                     background: #f0f9ff; }
-              .container { text-align: center; }
-              .success { color: #22c55e; font-size: 48px; }
-              p { color: #6b7280; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="success">✓</div>
-              <p>Login successful! Closing...</p>
-            </div>
-            <script>
-              // Send token to parent window
-              window.opener.postMessage({ 
-                type: 'OAUTH_SUCCESS', 
-                token: '${token}',
-                user: ${JSON.stringify(fullUser)}
-              }, '*');
-              
-              // Close popup after a short delay
-              setTimeout(() => window.close(), 500);
-            </script>
-          </body>
-          </html>
-        `);
-      }
+      // Always redirect - popup flow had issues with window.opener being lost after Google redirect
+      res.redirect(`${clientUrl}/dashboard?token=${token}`);
     } catch (dbError) {
       console.error('[OAuth] Database error after auth:', dbError);
       res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_db_error`);
