@@ -986,6 +986,7 @@ VITE_WS_URL=http://localhost:5000
 | WebSocket Rate Limit | ✅ Complete | 20 msgs/sec per connection |
 | Error Sanitization | ✅ Complete | Production-safe error messages |
 | Request Size Limits | ✅ Complete | 10KB body limit configured |
+| OAuth Fix | ✅ Complete | SameSite=lax, skip rate limit on OAuth endpoints |
 
 ---
 
