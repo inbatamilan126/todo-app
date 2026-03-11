@@ -68,11 +68,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Required for secure cookies behind a proxy (Nginx, Docker, etc.)
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'lax', // 'lax' for OAuth compatibility, use 'strict' only for same-site requests
+    sameSite: 'lax', 
   },
 }));
 

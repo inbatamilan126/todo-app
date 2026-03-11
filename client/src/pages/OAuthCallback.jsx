@@ -56,6 +56,7 @@ export function OAuthCallback() {
             code_verifier: codeVerifier,
             provider: 'google',
           }),
+          credentials: 'include', // Required to send session cookie
         });
         
         if (!response.ok) {
