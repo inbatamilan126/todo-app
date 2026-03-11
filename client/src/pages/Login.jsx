@@ -32,30 +32,6 @@ export function Login() {
     }
   }, [searchParams]);
 
-  // Handle OAuth popup message
-  useEffect(() => {
-    const handleOAuthMessage = (event) => {
-      if (event.data?.type === 'OAUTH_SUCCESS' && event.data?.token) {
-        // If user data is provided directly, use it to avoid extra API call
-        if (event.data?.user) {
-          localStorage.setItem('token', event.data.token);
-          localStorage.setItem('user', JSON.stringify(event.data.user));
-          // Trigger auth state update
-          window.dispatchEvent(new CustomEvent('auth:login', { 
-            detail: { token: event.data.token, user: event.data.user } 
-          }));
-          navigate('/today');
-        } else {
-          // Fallback: call loginWithToken which fetches /me
-          loginWithToken(event.data.token).then(() => {
-            navigate('/today');
-          });
-        }
-      }
-    };
-    window.addEventListener('message', handleOAuthMessage);
-    return () => window.removeEventListener('message', handleOAuthMessage);
-  }, [navigate, loginWithToken]);
 
   const handleGoogleLogin = () => {
     // Use PKCE OAuth flow for secure authentication
