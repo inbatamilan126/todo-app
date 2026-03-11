@@ -143,7 +143,7 @@ export function AuthProvider({ children }) {
       
       // Build the OAuth URL with PKCE parameters
       // Note: API_URL already includes /api, so we don't add it again
-      const oauthUrl = new URL(`${baseUrl}/auth/oauth/${provider}`);
+      const oauthUrl = new URL(`${baseUrl}/auth/oauth/${provider}`, window.location.origin);
       oauthUrl.searchParams.set('code_challenge', codeChallenge);
       oauthUrl.searchParams.set('code_challenge_method', 'S256');
       oauthUrl.searchParams.set('state', state);
