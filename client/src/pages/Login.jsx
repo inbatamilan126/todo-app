@@ -12,7 +12,7 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const { login, loginWithToken } = useAuth();
+  const { login, loginWithToken, loginWithOAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -25,6 +25,8 @@ export function Login() {
         oauth_no_user: 'Could not get user information from Google.',
         oauth_not_configured: 'Google OAuth is not configured.',
         oauth_db_error: 'Database error during OAuth. Please try again.',
+        oauth_callback_failed: 'OAuth callback failed. Please try again.',
+        pkce_missing_verifier: 'Security verification failed. Please try again.',
       };
       setError(errorMessages[error] || 'Authentication failed. Please try again.');
     }
@@ -56,14 +58,10 @@ export function Login() {
   }, [navigate, loginWithToken]);
 
   const handleGoogleLogin = () => {
-    // Use redirect flow for OAuth (more reliable than popup)
-    // The server will redirect back with token after Google auth
-    const googleAuthUrl = `${API_URL}/auth/oauth/google`;
-    
-    // Always use redirect flow - it's more reliable than popup
-    // which loses opener reference after OAuth redirect
-    console.log('[OAuth] Redirecting to Google auth');
-    window.location.href = googleAuthUrl;
+    // Use PKCE OAuth flow for secure authentication
+    // This generates code_verifier/code_challenge and redirects to OAuth
+    console.log('[OAuth] Starting PKCE flow with Google');
+    loginWithOAuth('google');
   };
 
   const handleSubmit = async (e) => {

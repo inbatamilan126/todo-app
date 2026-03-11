@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { OAuthCallback } from './pages/OAuthCallback';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectView } from './pages/ProjectView';
 import { Settings } from './pages/Settings';
@@ -65,6 +66,10 @@ export default function App() {
             <Register />
           </PublicRoute>
         }
+      />
+      <Route
+        path="/oauth/callback"
+        element={<OAuthCallback />}
       />
 
       {/* Protected Routes */}

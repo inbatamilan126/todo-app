@@ -1,6 +1,59 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import socketService from '../services/socket';
+import { API_URL } from '../utils/constants';
+
+// ============================================
+// PKCE Utility Functions
+// ============================================
+
+/**
+ * Generate a cryptographically secure code_verifier
+ * @returns {string} A random string between 43-128 characters
+ */
+function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64URLEncode(array);
+}
+
+/**
+ * Generate a code_challenge from a code_verifier using SHA-256
+ * @param {string} verifier - The code_verifier
+ * @returns {Promise<string>} The base64URL-encoded SHA-256 hash
+ */
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return base64URLEncode(new Uint8Array(hash));
+}
+
+/**
+ * Encode a buffer to base64URL format (RFC 4648)
+ * @param {Uint8Array} buffer 
+ * @returns {string}
+ */
+function base64URLEncode(buffer) {
+  let str = '';
+  buffer.forEach((byte) => {
+    str += String.fromCharCode(byte);
+  });
+  return btoa(str)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+/**
+ * Generate a random state string for CSRF protection
+ * @returns {string}
+ */
+function generateState() {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return base64URLEncode(array);
+}
 
 const AuthContext = createContext(null);
 
@@ -10,40 +63,17 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      // First: Check if token exists in URL (mobile OAuth redirect)
+      // Check for PKCE OAuth callback - delegate to OAuthCallback page
       const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get('token');
+      const oauthCode = urlParams.get('code');
       
-      if (urlToken) {
-        try {
-          // Save token to localStorage first (needed for API interceptor)
-          localStorage.setItem('token', urlToken);
-          
-          // Call API to get user
-          const response = await api.get('/auth/me');
-          
-          // /auth/me returns { user: <object> }, extract the user object
-          const userData = response.data.user || response.data;
-          
-          localStorage.setItem('user', JSON.stringify(userData));
-          setUser(userData);
-          
-          // Clean URL - remove token param
-          window.history.replaceState({}, '', '/today');
-          
-          try {
-            socketService.connect(urlToken);
-          } catch (e) {
-            console.warn('Socket connection failed:', e);
-          }
-        } catch (e) {
-          console.error('Failed to authenticate from URL token:', e);
-        }
+      if (oauthCode && window.location.pathname !== '/oauth/callback') {
+        // This should be handled by OAuthCallback page, skip init
         setLoading(false);
         return;
       }
       
-      // Original flow: Check localStorage for existing session
+      // Check localStorage for existing session
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
 
@@ -102,6 +132,37 @@ export function AuthProvider({ children }) {
       return userData;
     } catch (error) {
       console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  // PKCE OAuth login - initiates the OAuth flow with PKCE
+  const loginWithOAuth = async (provider = 'google') => {
+    try {
+      // Generate PKCE code_verifier and code_challenge
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      const state = generateState();
+      
+      // Store code_verifier in sessionStorage (not localStorage for security)
+      sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+      sessionStorage.setItem('oauth_code_challenge', codeChallenge);
+      
+      // Get base API URL (already includes /api)
+      const baseUrl = API_URL || '/api';
+      
+      // Build the OAuth URL with PKCE parameters
+      // Note: API_URL already includes /api, so we don't add it again
+      const oauthUrl = new URL(`${baseUrl}/auth/oauth/${provider}`);
+      oauthUrl.searchParams.set('code_challenge', codeChallenge);
+      oauthUrl.searchParams.set('code_challenge_method', 'S256');
+      oauthUrl.searchParams.set('state', state);
+      oauthUrl.searchParams.set('pkce', 'true');
+      
+      // Redirect to OAuth provider
+      window.location.href = oauthUrl.toString();
+    } catch (error) {
+      console.error('OAuth login error:', error);
       throw error;
     }
   };
@@ -181,9 +242,11 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         loading,
         login,
         loginWithToken,
+        loginWithOAuth,
         register,
         logout,
         updateUser,
