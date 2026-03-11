@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 /**
  * Strict rate limiter for authentication endpoints
  * Prevents brute force attacks on login/register
+ * NOTE: Skips OAuth endpoints to allow OAuth flow to work properly
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -11,6 +12,10 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  skip: (req) => {
+    // Skip OAuth endpoints to allow OAuth flow to work
+    return req.path.startsWith('/oauth/');
+  },
 });
 
 /**
