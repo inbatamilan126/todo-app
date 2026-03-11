@@ -41,7 +41,7 @@ export function OAuthCallback() {
         const codeVerifier = sessionStorage.getItem('oauth_code_verifier');
         
         if (!codeVerifier) {
-          throw new Error('Security verification failed: missing code verifier');
+          throw new Error('Security verification failed: missing code verifier. This usually happens if you refresh the callback page or open it in a new tab. Please return to the login page and try again.');
         }
 
         // Exchange the code for the token using standard PKCE POST request
