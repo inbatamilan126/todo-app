@@ -21,11 +21,11 @@ const router = express.Router();
  * Supports both login (existing user) and signup (new user)
  * @param {string} provider - 'google', 'github', etc.
  * @param {string} providerId - Unique ID from the OAuth provider
- * @param {object} profileData - { email, name, avatarUrl }
+ * @param {object} profileData - { email, name, avatarUrl, googleAccessToken }
  * @returns {Promise<{user: object, isNewUser: boolean}>}
  */
 async function findOrCreateOAuthUser(provider, providerId, profileData) {
-  const { email, name, avatarUrl } = profileData;
+  const { email, name, avatarUrl, googleAccessToken } = profileData;
   
   if (!email) {
     throw new Error(`OAuth ${provider}: No email provided by provider`);
@@ -41,7 +41,11 @@ async function findOrCreateOAuthUser(provider, providerId, profileData) {
   if (user) {
     // User exists - check if they're linking an OAuth provider or already using OAuth
     if (user.provider === provider && user.providerId === providerId) {
-      // Already linked - this is a login
+      // Already linked - this is a login, update the access token just in case
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { googleAccessToken }
+      });
       return { user, isNewUser: false };
     }
     
@@ -54,6 +58,7 @@ async function findOrCreateOAuthUser(provider, providerId, profileData) {
           provider,
           providerId,
           avatarUrl: avatarUrl || user.avatarUrl,
+          googleAccessToken,
         }
       });
       return { user, isNewUser: false };
@@ -69,6 +74,7 @@ async function findOrCreateOAuthUser(provider, providerId, profileData) {
         provider,
         providerId,
         avatarUrl,
+        googleAccessToken,
       }
     });
     isNewUser = true;
@@ -83,6 +89,7 @@ async function findOrCreateOAuthUser(provider, providerId, profileData) {
       provider,
       providerId,
       avatarUrl,
+      googleAccessToken,
     }
   });
   isNewUser = true;
@@ -352,8 +359,11 @@ router.get('/oauth/google', (req, res, next) => {
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('scope', 'profile email');
-  authUrl.searchParams.set('prompt', 'select_account'); // Force account selection
+  authUrl.searchParams.set('prompt', 'select_account consent'); // Force account selection and re-consent
+  
+  // Scopes are space-separated. Allow the client to override, but always ensure basic profile info.
+  const requestedScope = req.query.scope || 'profile email';
+  authUrl.searchParams.set('scope', requestedScope);
   
   if (code_challenge) {
     authUrl.searchParams.set('code_challenge', code_challenge);
@@ -432,6 +442,7 @@ router.post('/oauth/token', async (req, res) => {
       email: googleUserInfo.email,
       name: googleUserInfo.name,
       avatarUrl: googleUserInfo.picture,
+      googleAccessToken: googleTokens.access_token, // Save the token for contacts!
     });
     
     // Generate our JWT token
