@@ -338,24 +338,34 @@ router.get('/oauth/google', (req, res, next) => {
     console.log('[OAuth] PKCE flow initiated with challenge:', code_challenge);
   }
   
-  // Configure the authentication request
-  const authOptions = {
-    scope: ['profile', 'email'],
-    prompt: 'select_account',
-  };
+  // For PKCE to work correctly with Google, we need to construct the URL manually
+  // because passport-google-oauth20 doesn't reliably pass through these extra parameters.
+  
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${process.env.CLIENT_URL || 'http://localhost:5173'}/oauth/callback`;
+  
+  if (!clientId) {
+    return res.status(503).json({ error: 'Google OAuth is not configured' });
+  }
 
-  // Add PKCE parameters to the options if they exist
-  // passport-google-oauth20 will pass these through as query params to Google
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', clientId);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', 'profile email');
+  authUrl.searchParams.set('prompt', 'select_account'); // Force account selection
+  
   if (code_challenge) {
-    authOptions.code_challenge = code_challenge;
-    authOptions.code_challenge_method = code_challenge_method || 'S256';
+    authUrl.searchParams.set('code_challenge', code_challenge);
+    authUrl.searchParams.set('code_challenge_method', code_challenge_method || 'S256');
   }
   
   if (state) {
-    authOptions.state = state;
+    authUrl.searchParams.set('state', state);
   }
-  
-  passport.authenticate('google', authOptions)(req, res, next);
+
+  console.log('[OAuth] Redirecting to Google Auth URL with PKCE:', !!code_challenge);
+  res.redirect(authUrl.toString());
 });
 
 
