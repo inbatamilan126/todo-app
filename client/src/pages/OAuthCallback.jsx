@@ -18,7 +18,8 @@ export function OAuthCallback() {
       // Mark as fetched immediately to prevent double-fetch
       fetchedRef.current = true;
       
-      const tokenId = searchParams.get('token_id');
+      const code = searchParams.get('code');
+      const state = searchParams.get('state');
       const errorParam = searchParams.get('error');
       
       if (errorParam) {
@@ -26,19 +27,35 @@ export function OAuthCallback() {
         return;
       }
       
-      if (!tokenId) {
-        setError('No token ID received');
+      if (!code) {
+        setError('No authorization code received');
         return;
       }
+
+      // Check state if desired (CSRF protection)
+      // const savedState = sessionStorage.getItem('oauth_state');
+      // if (state !== savedState) ...
       
       try {
-        // Fetch the token from server using the token ID
-        const response = await fetch(`/api/auth/oauth/token/${tokenId}`, {
-          method: 'GET',
+        // Get code_verifier from session storage
+        const codeVerifier = sessionStorage.getItem('oauth_code_verifier');
+        
+        if (!codeVerifier) {
+          throw new Error('Security verification failed: missing code verifier');
+        }
+
+        // Exchange the code for the token using standard PKCE POST request
+        const response = await fetch('/api/auth/oauth/token', {
+          method: 'POST',
           headers: {
+            'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-          credentials: 'include', // Include cookies for session
+          body: JSON.stringify({
+            code,
+            code_verifier: codeVerifier,
+            provider: 'google',
+          }),
         });
         
         if (!response.ok) {
@@ -57,6 +74,7 @@ export function OAuthCallback() {
         // Clean up PKCE session data from sessionStorage
         sessionStorage.removeItem('oauth_code_verifier');
         sessionStorage.removeItem('oauth_code_challenge');
+        sessionStorage.removeItem('oauth_state');
         
         // Store token and user
         localStorage.setItem('token', token);

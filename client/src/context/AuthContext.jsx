@@ -63,16 +63,6 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      // Check for PKCE OAuth callback - delegate to OAuthCallback page
-      const urlParams = new URLSearchParams(window.location.search);
-      const oauthCode = urlParams.get('code');
-      
-      if (oauthCode && window.location.pathname !== '/oauth/callback') {
-        // This should be handled by OAuthCallback page, skip init
-        setLoading(false);
-        return;
-      }
-      
       // Check localStorage for existing session
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
