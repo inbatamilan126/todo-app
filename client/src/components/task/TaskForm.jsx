@@ -4,9 +4,12 @@ import { DatePicker } from '../common/DatePicker';
 import { Button } from '../common/Button';
 import { PRIORITY_LABELS, TASK_STATUS_LABELS } from '../../utils/constants';
 import { useLabels } from '../../context/LabelContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useContacts } from '../../context/ContactsContext';
 import { Tag, Bell, Edit2, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { MentionsInput, Mention } from 'react-mentions';
 
 export function TaskForm({
   formData,
@@ -19,6 +22,9 @@ export function TaskForm({
 }) {
   const { labels } = useLabels();
   const { user } = useAuth();
+  const { contacts, fetchContacts } = useContacts();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const [isEditingReminder, setIsEditingReminder] = useState(false);
 
   const toggleLabel = (labelId) => {
@@ -96,6 +102,11 @@ export function TaskForm({
     label,
   }));
 
+  // Fetch contacts when the form is opened/mounted
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
+
   const projectOptions = projects?.map(p => ({
     value: p.id,
     label: p.name,
@@ -122,13 +133,91 @@ export function TaskForm({
         <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Description
         </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => onChange({ ...formData, description: e.target.value })}
-          placeholder="Add more details..."
-          rows={3}
-          className="input min-h-[80px] resize-none"
-        />
+        <div className="mentions-wrapper w-full min-h-[120px] rounded-lg border border-gray-300 bg-white transition-colors focus-within:border-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-800 flex flex-col p-3">
+          <MentionsInput
+            value={formData.description || ''}
+            onChange={(event, newValue, newPlainTextValue, mentions) => {
+              // Update the description text
+              const updatedFormData = { ...formData, description: newValue };
+              
+              // Map the parsed react-mentions array into our linkedContacts schema
+              if (mentions && mentions.length > 0) {
+                updatedFormData.linkedContacts = mentions.map(m => {
+                  // We stored the full contact object in `contacts` memory. Let's find it.
+                  const fullContact = contacts?.find(c => c.id === m.id);
+                  return fullContact || { id: m.id, name: m.display }; // fallback
+                });
+              } else {
+                updatedFormData.linkedContacts = [];
+              }
+              
+              onChange(updatedFormData);
+            }}
+            placeholder="Add more details... Type @ to mention someone"
+            className="w-full relative flex-grow flex flex-col"
+            style={{
+              width: '100%',
+              minHeight: '100%',
+              flexGrow: 1,
+              // Override react-mentions' hardcoded `backgroundColor: 'white'` inline style
+              // on the suggestions overlay (substyle merges this over the default).
+              suggestions: {
+                backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                color: isDark ? '#f9fafb' : '#111827',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                zIndex: 100,
+              },
+              '&suggestions': {
+                backgroundColor: isDark ? '#1f2937' : '#ffffff',
+              },
+            }}
+            allowSuggestionsAboveCursor={true}
+            classNames={{
+              control: "w-full min-h-[100px] relative flex-grow !p-0 !m-0",
+              highlighter: "pointer-events-none text-transparent break-words whitespace-pre-wrap font-sans text-sm leading-5 tracking-normal !p-0 !m-0",
+              input: "w-full h-full min-h-[100px] outline-none border-transparent focus:border-transparent focus:ring-0 focus:outline-none !shadow-none bg-transparent resize-y !text-gray-900 dark:!text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 font-sans text-sm leading-5 tracking-normal !p-0 !m-0 overflow-y-auto",
+              suggestions: "shadow-xl rounded-lg overflow-hidden z-[100]",
+              suggestionsList: "max-h-60 overflow-y-auto w-full min-w-[200px]",
+              suggestion: "px-4 py-2 cursor-pointer transition-colors duration-150 border-b last:border-0",
+              suggestionHighlighted: "bg-primary-50 dark:bg-primary-900/30"
+            }}
+          >
+          <Mention
+            trigger="@"
+            data={contacts || []}
+            onAdd={() => {
+              // Optional: trigger analytics or secondary actions
+            }}
+            renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => (
+              <div className="flex items-center gap-3">
+                {suggestion.avatarUrl ? (
+                  <img src={suggestion.avatarUrl} alt={suggestion.name} className="h-6 w-6 rounded-full" />
+                ) : (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 dark:bg-primary-900 dark:text-primary-300">
+                    {suggestion.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className={`text-sm font-medium ${focused ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                    {suggestion.name}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {suggestion.email || suggestion.phone || 'No contact info'}
+                  </span>
+                </div>
+              </div>
+            )}
+            displayTransform={(id, display) => `@${display}`}
+            className="bg-primary-100 dark:bg-primary-900/50 rounded px-1 -mx-1"
+          />
+        </MentionsInput>
+        </div>
+        
+        {!contacts && (
+          <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+             Connect Google Contacts in Settings to mention people here.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 items-start">
