@@ -11,9 +11,6 @@ import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
-// In-memory token store for OAuth (cleared after one use)
-// For production, use Redis or database
-const oauthTokenStore = new Map();
 
 // ============================================
 // OAuth Helper Functions
@@ -111,7 +108,7 @@ function configureGoogleOAuth() {
   return new GoogleStrategy({
     clientID: clientId,
     clientSecret: clientSecret,
-    callbackURL: `${oauthBaseUrl}/api/auth/oauth/google/callback`,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || `${process.env.CLIENT_URL || 'http://localhost:5173'}/oauth/callback`,
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value;
@@ -350,88 +347,6 @@ router.get('/oauth/google', (req, res, next) => {
   })(req, res, next);
 });
 
-// Google OAuth - Callback
-router.get('/oauth/google/callback', (req, res, next) => {
-  if (!googleStrategy) {
-    return res.status(503).json({ 
-      error: 'oauth_not_configured',
-      message: 'Google OAuth is not configured.'
-    });
-  }
-  
-  // Debug: Log the query params to diagnose issues
-  console.log('[OAuth] Callback received:', req.query);
-  
-  // PKCE is now REQUIRED - always expect JSON response
-  // Check for authorization code from Google
-  if (!req.query.code) {
-    return res.status(400).json({ 
-      error: 'missing_authorization_code',
-      message: 'No authorization code received from OAuth provider'
-    });
-  }
-  
-  // Check that PKCE was initiated (code_challenge must be in session)
-  if (!req.session.oauth_code_challenge) {
-    console.error('[OAuth] PKCE code_challenge not found in session. Please start OAuth flow from the client.');
-    return res.status(400).json({ 
-      error: 'pkce_required',
-      message: 'PKCE is required. Please initiate OAuth from the application.'
-    });
-  }
-  
-  passport.authenticate('google', { session: false }, async (err, user, info) => {
-    if (err) {
-      console.error('[OAuth] Callback error:', err);
-      return res.status(400).json({ error: 'oauth_failed', message: err.message });
-    }
-    
-    if (!user) {
-      console.error('[OAuth] No user returned from provider');
-      return res.status(401).json({ error: 'oauth_no_user' });
-    }
-    
-    try {
-      // Generate JWT token (user already authenticated by Passport)
-      const token = generateToken(user.id);
-      
-      // Get full user data (same as /me endpoint)
-      const fullUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          avatarUrl: true,
-          provider: true,
-          theme: true,
-          defaultReminderMinutes: true,
-          defaultReminderTime: true,
-          createdAt: true,
-        }
-      });
-      
-// Store token in token store (not session - avoids cookie issues)
-      const tokenId = randomUUID();
-      console.log('[OAuth] Storing token with ID:', tokenId, 'Store size:', oauthTokenStore.size);
-      oauthTokenStore.set(tokenId, { token, user: fullUser });
-      console.log('[OAuth] Token stored. Store size after:', oauthTokenStore.size);
-      
-      // Clean up PKCE session data
-      delete req.session.oauth_code_challenge;
-      delete req.session.oauth_code_challenge_method;
-      delete req.session.oauth_state;
-      
-      // Redirect to client-side callback with token ID
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-      console.log('[OAuth] PKCE flow completed, redirecting to client with token ID');
-      return res.redirect(`${clientUrl}/oauth/callback?token_id=${tokenId}`);
-    } catch (dbError) {
-      console.error('[OAuth] Database error after auth:', dbError);
-      return res.status(500).json({ error: 'oauth_db_error', message: dbError.message });
-    }
-  })(req, res, next);
-});
 
 // PKCE Token Exchange Endpoint
 // This endpoint verifies the PKCE code_verifier and returns the token
@@ -483,10 +398,7 @@ router.post('/oauth/token', async (req, res) => {
     
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const oauthBaseUrl = (process.env.API_URL || 'http://localhost:5000')
-      .replace(/\/+$/, '')
-      .replace(/\/api$/, '');
-    const callbackURL = `${oauthBaseUrl}/api/auth/oauth/google/callback`;
+    const callbackURL = process.env.GOOGLE_CALLBACK_URL || `${process.env.CLIENT_URL || 'http://localhost:5173'}/oauth/callback`;
     
     // Exchange code for tokens with Google
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -564,27 +476,6 @@ router.post('/oauth/token', async (req, res) => {
   }
 });
 
-// Fetch OAuth token by token ID (used by client callback page)
-router.get('/oauth/token/:tokenId', (req, res) => {
-  const { tokenId } = req.params;
-  console.log('[OAuth] Fetch token request. Token ID:', tokenId, 'Store size:', oauthTokenStore.size);
-  
-  // Look up token in our token store (not session - avoids cookie issues)
-  const tokenData = oauthTokenStore.get(tokenId);
-  
-  if (!tokenData) {
-    return res.status(401).json({ error: 'Invalid or expired token ID' });
-  }
-  
-  const { token, user } = tokenData;
-  
-  // Remove from store (one-time use)
-  oauthTokenStore.delete(tokenId);
-  
-  console.log('[OAuth] Token fetched by client successfully');
-  
-  res.json({ token, user });
-});
 
 // Check OAuth configuration status
 router.get('/oauth/status', (req, res) => {
