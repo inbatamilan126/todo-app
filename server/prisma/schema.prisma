@@ -15,6 +15,7 @@ model User {
   avatarUrl   String?  @map("avatar_url")
   provider    String   @default("email")
   providerId  String?  @map("provider_id")
+  googleAccessToken String? @db.Text @map("google_access_token") // Used for Contacts API
   theme                  String             @default("system")
   defaultReminderMinutes Int                @default(30) @map("default_reminder_minutes")
   defaultReminderTime    String             @default("09:00") @map("default_reminder_time")
@@ -54,6 +55,7 @@ model Task {
   userId      String    @map("user_id")
   title       String
   description     String?   @db.Text
+  linkedContacts  Json?     @map("linked_contacts")  // Minimal contact data (name, email, phone)
   dueDate         DateTime? @map("due_date")
   dueTime         String?   @map("due_time")
   priority        String    @default("medium")
